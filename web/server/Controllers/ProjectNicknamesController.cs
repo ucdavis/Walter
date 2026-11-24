@@ -17,8 +17,7 @@ public sealed class ProjectNicknamesController : ApiControllerBase
 {
     private readonly AppDbContext _ctx;
     private readonly IDatamartService _datamartService;
-    private readonly IAuthorizationService _authorizationService;
-    private readonly IUserService _userService;
+    private readonly PortfolioAccess _portfolioAccess;
     private readonly PpmPortfolioService _portfolioService;
 
     public ProjectNicknamesController(
@@ -30,8 +29,7 @@ public sealed class ProjectNicknamesController : ApiControllerBase
     {
         _ctx = ctx;
         _datamartService = datamartService;
-        _authorizationService = authorizationService;
-        _userService = userService;
+        _portfolioAccess = new PortfolioAccess(authorizationService, userService, portfolioService);
         _portfolioService = portfolioService;
     }
 
@@ -117,16 +115,12 @@ public sealed class ProjectNicknamesController : ApiControllerBase
 
     /// <summary>
     /// True when the caller could open this project's page: financial viewers, or anyone who
-    /// passes the portfolio gate for <paramref name="iamId"/> when the project is in that portfolio.
+    /// can open the portfolio of <paramref name="iamId"/> when the project is in that portfolio.
     /// </summary>
     private async Task<bool> CallerCanOpenProjectAsync(
         string? iamId, string projectNumber, CancellationToken cancellationToken)
     {
-        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
-            User,
-            resource: null,
-            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
-        if (hasFinancialAccess)
+        if (await _portfolioAccess.CanViewFinancialsAsync(User))
         {
             return true;
         }
@@ -137,25 +131,7 @@ public sealed class ProjectNicknamesController : ApiControllerBase
         }
 
         var owner = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
-        if (owner is null)
-        {
-            return false;
-        }
-
-        Guid userId;
-        try
-        {
-            userId = User.GetUserId();
-        }
-        catch (InvalidOperationException)
-        {
-            return false;
-        }
-
-        var currentUser = await _userService.GetByIdAsync(userId, cancellationToken);
-
-        // Same gate as the portfolio page: PI or PM on at least one of the owner's projects.
-        if (!await _portfolioService.IsOnAnyProjectForPiAsync(currentUser?.EmployeeId, owner.EmployeeId, cancellationToken))
+        if (owner is null || !await _portfolioAccess.CanOpenPortfolioAsync(User, owner.EmployeeId, cancellationToken))
         {
             return false;
         }

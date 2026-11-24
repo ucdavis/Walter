@@ -15,6 +15,7 @@ public sealed class ProjectController : ApiControllerBase
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserService _userService;
     private readonly PpmPortfolioService _portfolioService;
+    private readonly PortfolioAccess _portfolioAccess;
 
     public sealed record ManagedPiRecord(
         [property: JsonPropertyName("employeeId")] string EmployeeId,
@@ -41,37 +42,24 @@ public sealed class ProjectController : ApiControllerBase
         _authorizationService = authorizationService;
         _userService = userService;
         _portfolioService = portfolioService;
+        _portfolioAccess = new PortfolioAccess(authorizationService, userService, portfolioService);
     }
 
     [HttpGet("by-iam/{iamId}")]
     public async Task<IActionResult> GetByIamIdAsync(string iamId, CancellationToken cancellationToken)
     {
-        // Check if the user has financial access
-        var hasFinancialAccess = (await _authorizationService.AuthorizeAsync(
-            User,
-            resource: null,
-            policyName: AuthorizationHelper.Policies.CanViewFinancials)).Succeeded;
-
         var person = await _datamartService.GetSearchablePersonByIamIdAsync(iamId, cancellationToken);
         if (person is null)
         {
             // Non-financial callers should not be able to distinguish unknown IAM IDs from inaccessible portfolios.
-            return hasFinancialAccess ? NotFound() : Forbid();
+            return await _portfolioAccess.CanViewFinancialsAsync(User) ? NotFound() : Forbid();
         }
 
         var employeeId = person.EmployeeId;
 
-        // If no financial access, verify the current user is PI or PM on at least one
-        // of the requested employee's projects (covers both self-lookup and PM-views-PI)
-        if (!hasFinancialAccess)
+        if (!await _portfolioAccess.CanOpenPortfolioAsync(User, employeeId, cancellationToken))
         {
-            var currentEmployeeId = await GetCurrentEmployeeIdAsync(cancellationToken);
-            var isOnProject = await _portfolioService.IsOnAnyProjectForPiAsync(currentEmployeeId, employeeId, cancellationToken);
-
-            if (!isOnProject)
-            {
-                return Forbid();
-            }
+            return Forbid();
         }
 
         var portfolio = await _portfolioService.GetPortfolioProjectsAsync(employeeId, cancellationToken);
