@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OutboundMessage> OutboundMessages => Set<OutboundMessage>();
     public DbSet<ChartStringLabel> ChartStringLabels => Set<ChartStringLabel>();
     public DbSet<Projection> Projections => Set<Projection>();
+    public DbSet<ProjectNickname> ProjectNicknames => Set<ProjectNickname>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -24,5 +25,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         OutboundMessage.OnModelCreating(modelBuilder);
         ChartStringLabel.OnModelCreating(modelBuilder);
         Projection.OnModelCreating(modelBuilder);
+        ProjectNickname.OnModelCreating(modelBuilder);
     }
 }
