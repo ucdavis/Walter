@@ -104,7 +104,67 @@ const setupHandlers = (
   );
 };
 
+const serveNicknames = (enabled: boolean) =>
+  server.use(
+    http.get('/api/system/features', () =>
+      HttpResponse.json({ nicknamesEnabled: enabled })
+    ),
+    http.get('/api/project/nicknames', () =>
+      HttpResponse.json([
+        {
+          nickname: 'Smith startup',
+          projectNumber: 'P1',
+          taskNumber: '',
+          updatedAt: '',
+          updatedBy: null,
+        },
+      ])
+    )
+  );
+
 describe('project detail page', () => {
+  describe('nicknames', () => {
+    it('titles the page with the project nickname and keeps the official name', async () => {
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, [
+        createProject({ projectType: 'Internal' }),
+      ]);
+      serveNicknames(true);
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+      try {
+        const heading = await screen.findByRole('heading', {
+          level: 1,
+          name: /Smith startup/,
+        });
+        expect(heading).toHaveTextContent('Test Project');
+        expect(
+          screen.getByRole('button', { name: 'Edit nickname for Test Project' })
+        ).toBeInTheDocument();
+        expect(
+          await screen.findByRole('button', {
+            name: 'Edit nickname for task T001',
+          })
+        ).toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+
+    it('shows no nicknames or pencils when the flag is off', async () => {
+      setupHandlers({ employeeId: '1000', name: 'PI User' }, [createProject()]);
+      serveNicknames(false);
+      const { cleanup } = renderRoute({ initialPath: '/projects/1000/P1' });
+      try {
+        await screen.findByRole('heading', { level: 1, name: 'Test Project' });
+        expect(screen.queryByText('Smith startup')).not.toBeInTheDocument();
+        expect(
+          screen.queryByRole('button', { name: /Edit nickname/ })
+        ).not.toBeInTheDocument();
+      } finally {
+        cleanup();
+      }
+    });
+  });
+
   it.each([true, false])(
     'gates the PI-wide projections action with flag %s',
     async (enabled) => {

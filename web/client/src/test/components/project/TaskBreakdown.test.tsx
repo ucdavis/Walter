@@ -4,6 +4,10 @@ import { userEvent } from '@testing-library/user-event';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
 import { downloadExcelCsv } from '@/lib/csv.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import {
+  buildNicknameLookup,
+  NicknamesContext,
+} from '@/queries/projectNicknames.ts';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
 
 vi.mock('@/lib/csv.ts', async (importOriginal) => {
@@ -82,6 +86,11 @@ const createProject = (
   taskStatus: 'Active',
   ...overrides,
 });
+
+const search = (value: string) =>
+  fireEvent.input(screen.getByPlaceholderText('Search all columns...'), {
+    target: { value },
+  });
 
 describe('TaskBreakdown', () => {
   it('shows a tooltip for the Commitments table header', async () => {
@@ -300,5 +309,75 @@ describe('TaskBreakdown', () => {
     expect(csv).not.toContain('Rainy Task');
     expect(csv).not.toContain('RAIN');
     expect(filename).toBe('task-breakdown-P1-filtered.csv');
+  });
+
+  describe('with nicknames', () => {
+    const nicknames = buildNicknameLookup(
+      [
+        {
+          nickname: 'Equipment',
+          projectNumber: 'P1',
+          taskNumber: 'T001',
+          updatedAt: '',
+          updatedBy: null,
+        },
+      ],
+      true
+    );
+    const renderWithNicknames = () =>
+      render(
+        <NicknamesContext.Provider value={nicknames}>
+          <TaskBreakdown
+            isInternal={false}
+            projectNumber="P1"
+            records={[
+              createProject({ taskName: 'Sunny Task', taskNum: 'T001' }),
+              createProject({
+                fundCode: 'FUND2',
+                taskName: 'Rainy Task',
+                taskNum: 'T002',
+              }),
+            ]}
+          />
+        </NicknamesContext.Provider>
+      );
+
+    it('shows the task nickname with the official task name beneath', () => {
+      renderWithNicknames();
+      expect(screen.getByText('Equipment')).toBeInTheDocument();
+      expect(screen.getByText('Sunny Task')).toBeInTheDocument();
+      expect(screen.getByText('Rainy Task')).toBeInTheDocument();
+    });
+
+    it('finds a task by nickname and by official name', () => {
+      renderWithNicknames();
+      search('Equipment');
+      expect(screen.getByText('Sunny Task')).toBeInTheDocument();
+      expect(screen.queryByText('Rainy Task')).not.toBeInTheDocument();
+      search('Sunny');
+      expect(screen.getByText('Equipment')).toBeInTheDocument();
+      expect(screen.queryByText('Rainy Task')).not.toBeInTheDocument();
+    });
+
+    it('adds a Task Nickname column to the export', () => {
+      renderWithNicknames();
+      fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+      const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+      expect(csv).toContain('Task Name,Task Nickname');
+      expect(csv).toContain('Sunny Task,Equipment');
+    });
+  });
+
+  it('leaves the export unchanged when nicknames are off', () => {
+    render(
+      <TaskBreakdown
+        isInternal={false}
+        projectNumber="P1"
+        records={[createProject()]}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
+    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
+    expect(csv).not.toContain('Task Nickname');
   });
 });

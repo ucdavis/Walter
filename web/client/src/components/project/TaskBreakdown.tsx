@@ -6,9 +6,13 @@ import {
   ChartStringCopyButton,
   FinjectorLink,
 } from '@/components/project/FinjectorLink.tsx';
+import { NicknameEditor } from '@/components/project/NicknameEditor.tsx';
+import { TaskName } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
+import type { CsvColumn } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -27,6 +31,8 @@ interface TaskBreakdownRow {
   programCode: string;
   programDesc: string;
   taskName: string;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
   taskStatus: string;
 }
@@ -65,6 +71,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         programCode: program,
         programDesc: r.programDesc,
         taskName: r.taskName ?? '',
+        taskNickname: '',
         taskNum: task,
         taskStatus: r.taskStatus,
       });
@@ -74,7 +81,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
   return Array.from(map.values());
 }
 
-const csvColumns = [
+const baseCsvColumns: CsvColumn<TaskBreakdownRow>[] = [
   { header: 'Financial Dept Code', key: 'financialDepartmentCode' as const },
   { header: 'Financial Dept', key: 'financialDepartment' as const },
   { header: 'Task', key: 'taskNum' as const },
@@ -134,7 +141,28 @@ export function TaskBreakdown({
   records,
 }: TaskBreakdownProps) {
   const [showAll, setShowAll] = useState(false);
-  const allRows = useMemo(() => buildRows(records), [records]);
+  const nicknames = useProjectNicknames();
+  const allRows = useMemo(
+    () =>
+      buildRows(records).map((row) => ({
+        ...row,
+        taskNickname: nicknames.task(projectNumber, row.taskNum) ?? '',
+      })),
+    [nicknames, projectNumber, records]
+  );
+  const csvColumns = useMemo(() => {
+    if (!nicknames.enabled) {
+      return baseCsvColumns;
+    }
+    const columns: CsvColumn<TaskBreakdownRow>[] = [];
+    for (const column of baseCsvColumns) {
+      columns.push(column);
+      if (column.key === 'taskName') {
+        columns.push({ header: 'Task Nickname', key: 'taskNickname' });
+      }
+    }
+    return columns;
+  }, [nicknames.enabled]);
   const hiddenCount = useMemo(
     () => allRows.filter(isHiddenByDefault).length,
     [allRows]
@@ -161,7 +189,7 @@ export function TaskBreakdown({
   const columns = useMemo(
     () => [
       columnHelper.accessor(
-        (row) => [row.taskNum, row.taskName].join(' '),
+        (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
         {
           cell: (info) => (
             <div>
@@ -189,10 +217,23 @@ export function TaskBreakdown({
                   </span>
                 )}
               </div>
-              {info.row.original.taskName && (
+              {(info.row.original.taskName ||
+                info.row.original.taskNickname) && (
                 <div className="text-xs text-base-content/80">
-                  {info.row.original.taskName}
+                  <TaskName
+                    name={info.row.original.taskName || null}
+                    projectNumber={projectNumber}
+                    taskNumber={info.row.original.taskNum}
+                  />
                 </div>
+              )}
+              {iamId && info.row.original.taskNum && (
+                <NicknameEditor
+                  iamId={iamId}
+                  officialName={`task ${info.row.original.taskNum}`}
+                  projectNumber={projectNumber}
+                  taskNumber={info.row.original.taskNum}
+                />
               )}
             </div>
           ),
@@ -387,9 +428,7 @@ export function TaskBreakdown({
       data={rows}
       footerRowClassName="totaltr"
       getRowProps={(row) =>
-        isHiddenByDefault(row.original)
-          ? { className: 'bg-base-300/80' }
-          : {}
+        isHiddenByDefault(row.original) ? { className: 'bg-base-300/80' } : {}
       }
       globalFilter="left"
       pagination="off"
