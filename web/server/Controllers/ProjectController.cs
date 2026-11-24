@@ -74,20 +74,10 @@ public sealed class ProjectController : ApiControllerBase
             }
         }
 
-        var piTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.PrincipalInvestigator, cancellationToken);
-        var pmTask = _portfolioService.GetEmployeeProjectsAsync(employeeId, PpmRole.ProjectManager, cancellationToken);
-        await Task.WhenAll(piTask, pmTask);
-        var piProjects = await piTask;
-        var managedProjects = await pmTask;
-
-        // PM projects without a project PI belong in the PM's own portfolio.
-        var orphanedProjects = managedProjects
-            .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
-            .ToList();
-
-        var piProjectNumbers = piProjects.Select(p => p.ProjectNumber).Distinct();
-        var orphanedProjectNumbers = orphanedProjects.Select(p => p.ProjectNumber).Distinct();
-        var projectNumbers = piProjectNumbers.Union(orphanedProjectNumbers).ToList();
+        var portfolio = await _portfolioService.GetPortfolioProjectsAsync(employeeId, cancellationToken);
+        var piProjects = portfolio.PiProjects;
+        var orphanedProjects = portfolio.OrphanedProjects;
+        var projectNumbers = portfolio.ProjectNumbers;
 
         if (!projectNumbers.Any())
             return Ok(Array.Empty<FacultyPortfolioRecord>());
