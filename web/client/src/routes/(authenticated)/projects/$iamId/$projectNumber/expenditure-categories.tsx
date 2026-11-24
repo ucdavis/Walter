@@ -1,3 +1,4 @@
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useMemo, useRef, useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useSuspenseQuery } from '@tanstack/react-query';
@@ -66,6 +67,7 @@ function RouteComponent() {
     [projects, projectNumber]
   );
 
+  const nicknames = useProjectNicknames();
   const taskOptions = useMemo(() => {
     const options = new Map<
       string,
@@ -81,7 +83,10 @@ function RouteComponent() {
         task: record.taskNum ?? '',
       };
       const key = JSON.stringify(filters);
-      const taskLabel = [filters.task || 'No task', record.taskName]
+      const taskLabel = [
+        filters.task || 'No task',
+        nicknames.task(projectNumber, filters.task) ?? record.taskName,
+      ]
         .filter(Boolean)
         .join(' – ');
 
@@ -98,7 +103,7 @@ function RouteComponent() {
     }
 
     return Array.from(options, ([value, option]) => ({ value, ...option }));
-  }, [projectRecords]);
+  }, [nicknames, projectNumber, projectRecords]);
 
   const hasFilters = filterKeys.some((key) => search[key] !== undefined);
   const selectedTask = hasFilters

@@ -62,6 +62,33 @@ export function buildNicknameLookup(
   };
 }
 
+/**
+ * Names to show for a live project/task pair. officialText holds the official names a
+ * nickname replaced, so search can still match them.
+ */
+export function nicknamedSource(
+  lookup: NicknameLookup,
+  source: {
+    projectName: string | null;
+    projectNumber: string | null;
+    taskName: string | null;
+    taskNumber: string | null;
+  }
+) {
+  const projectNickname = lookup.project(source.projectNumber);
+  const taskNickname = lookup.task(source.projectNumber, source.taskNumber);
+  return {
+    officialText: [
+      projectNickname && source.projectName,
+      taskNickname && source.taskName,
+    ]
+      .filter(Boolean)
+      .join(' '),
+    projectName: projectNickname ?? source.projectName,
+    taskName: taskNickname ?? source.taskName,
+  };
+}
+
 const disabledLookup = buildNicknameLookup([], false);
 
 export const NicknamesContext = createContext<NicknameLookup>(disabledLookup);

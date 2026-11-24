@@ -1,3 +1,7 @@
+import {
+  nicknamedSource,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import {
   useEffect,
@@ -61,23 +65,28 @@ export function SourcePicker<T extends ProjectionDraft>({
       validationMessage: error,
     }),
   }));
-  const choices = (catalog.data ?? []).map((source) => ({
-    disabled: session.draft.content.fundingSources.some((existing) =>
-      sourcesOverlap(existing, source)
-    ),
-    key: JSON.stringify([source.projectNumber, source.taskNumber]),
-    label: [
-      source.projectName,
-      source.taskNumber && `Task ${source.taskNumber}`,
-      source.taskName,
-    ]
-      .filter(Boolean)
-      .join(' · '),
-    projectName: source.projectName,
-    projectNumber: source.projectNumber,
-    taskName: source.taskName,
-    taskNumber: source.taskNumber,
-  }));
+  const nicknames = useProjectNicknames();
+  const choices = (catalog.data ?? []).map((source) => {
+    const names = nicknamedSource(nicknames, source);
+    return {
+      disabled: session.draft.content.fundingSources.some((existing) =>
+        sourcesOverlap(existing, source)
+      ),
+      key: JSON.stringify([source.projectNumber, source.taskNumber]),
+      label: [
+        names.projectName,
+        source.taskNumber && `Task ${source.taskNumber}`,
+        names.taskName,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      projectName: names.projectName,
+      projectNumber: source.projectNumber,
+      searchText: names.officialText,
+      taskName: names.taskName,
+      taskNumber: source.taskNumber,
+    };
+  });
   async function add() {
     if (busy.current || selectionRef.current?.read().hasChanges) {
       return;

@@ -1,3 +1,6 @@
+import { TaskName } from '@/components/project/NicknamedName.tsx';
+import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -74,6 +77,8 @@ interface PpmTaskRow {
   projectNumber: string;
   projectOwningOrg: string | null;
   taskName: string | null;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
 }
 
@@ -88,19 +93,27 @@ const ppmTaskColumns = [
     cell: (info) => <span className="text-sm">{info.getValue()}</span>,
     header: 'Project',
   }),
-  ppmTaskColumnHelper.accessor('taskNum', {
-    cell: (info) => (
-      <div className="text-sm">
-        <div>{info.getValue()}</div>
-        {info.row.original.taskName && (
-          <div className="text-xs text-base-content/80">
-            {info.row.original.taskName}
-          </div>
-        )}
-      </div>
-    ),
-    header: 'Task',
-  }),
+  ppmTaskColumnHelper.accessor(
+    (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
+    {
+      cell: (info) => (
+        <div className="text-sm">
+          <div>{info.row.original.taskNum}</div>
+          {(info.row.original.taskName || info.row.original.taskNickname) && (
+            <div className="text-xs text-base-content/80">
+              <TaskName
+                name={info.row.original.taskName}
+                projectNumber={info.row.original.projectNumber}
+                taskNumber={info.row.original.taskNum}
+              />
+            </div>
+          )}
+        </div>
+      ),
+      header: 'Task',
+      id: 'taskNum',
+    }
+  ),
   ppmTaskColumnHelper.accessor('fundCode', {
     cell: (info) => (
       <div className="text-sm">
@@ -208,7 +221,7 @@ const glColumns = [
   }),
 ];
 
-const ppmTaskCsvColumns = [
+const ppmTaskCsvColumns: CsvColumn<PpmTaskRow>[] = [
   { header: 'Dept', key: 'projectOwningOrg' as const },
   { header: 'Project', key: 'projectNumber' as const },
   { header: 'Task', key: 'taskNum' as const },
@@ -301,6 +314,8 @@ function RouteComponent() {
   const isPending = isReconciliationPending || isTransactionsPending;
   const isError = isReconciliationError || isTransactionsError;
 
+  const nicknames = useProjectNicknames();
+
   // Find the specific reconciliation record
   const ppmRecord = reconciliation?.find((r) => matchesPPM(r, search));
 
@@ -330,6 +345,7 @@ function RouteComponent() {
             projectNumber: p.projectNumber,
             projectOwningOrg: p.projectOwningOrg ?? null,
             taskName: p.taskName ?? null,
+            taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
             taskNum: p.taskNum ?? '',
           };
         }
@@ -349,10 +365,12 @@ function RouteComponent() {
   );
 
   const filteredGlTransactions = glTransactions.filter((t) => {
-    if (accountFilter === 'revenue')
+    if (accountFilter === 'revenue') {
       return t.naturalAccountType?.startsWith('4');
-    if (accountFilter === 'expense')
+    }
+    if (accountFilter === 'expense') {
       return t.naturalAccountType?.startsWith('5');
+    }
     return true;
   });
 
@@ -445,7 +463,14 @@ function RouteComponent() {
               pagination="auto"
               tableActions={
                 <ExportDataButton
-                  columns={ppmTaskCsvColumns}
+                  columns={
+                    nicknames.enabled
+                      ? insertCsvColumnAfter(ppmTaskCsvColumns, 'taskName', {
+                          header: 'Task Nickname',
+                          key: 'taskNickname',
+                        })
+                      : ppmTaskCsvColumns
+                  }
                   data={ppmTasks}
                   filename="ppm-tasks.csv"
                 />
@@ -491,7 +516,7 @@ function RouteComponent() {
                 data={filteredGlTransactions}
                 expandable={true}
                 initialState={{
-                  sorting: [{ id: 'journalAcctDate', desc: true }],
+                  sorting: [{ desc: true, id: 'journalAcctDate' }],
                 }}
                 pagination="auto"
                 tableActions={

@@ -1,3 +1,4 @@
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useQuery } from '@tanstack/react-query';
 import {
   formatProjectionCurrency as formatCurrency,
@@ -38,6 +39,7 @@ function summarizeBalances(sources: ProjectionSourceSummary[]) {
 }
 
 export function CurrentProjectBalances({ iamId }: { iamId: string }) {
+  const nicknames = useProjectNicknames();
   const balances = useQuery({
     ...projectionSourceCatalogQueryOptions(iamId),
     refetchOnMount: 'always',
@@ -114,7 +116,7 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
                         className="min-w-0 truncate"
                         title={`${group.name} · ${group.projectNumber}`}
                       >
-                        {group.name}
+                        {nicknames.project(group.projectNumber) ?? group.name}
                       </span>
                     </span>
                     <strong
@@ -135,7 +137,13 @@ export function CurrentProjectBalances({ iamId }: { iamId: string }) {
                           key={source.taskNumber ?? ''}
                         >
                           <span className="min-w-0 truncate">
-                            {source.taskName || 'Task'} {source.taskNumber}
+                            {nicknames.task(
+                              group.projectNumber,
+                              source.taskNumber
+                            ) ||
+                              source.taskName ||
+                              'Task'}{' '}
+                            {source.taskNumber}
                           </span>
                           <span
                             className={`shrink-0 tabular-nums ${source.availableBalance < 0 ? 'text-error' : ''}`}

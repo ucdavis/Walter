@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { downloadExcelCsv } from '@/lib/csv.ts';
@@ -472,6 +472,87 @@ describe('project costs page', () => {
       await user.selectOptions(taskFilter, '');
       expect(screen.getByText('Field Entry')).toBeInTheDocument();
       expect(screen.getByText('Lab Entry')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('shows project and task nicknames when the feature is on', async () => {
+    const user = userEvent.setup();
+    setupHandlers(
+      [createProject({ awardNumber: null, projectType: 'Internal' })],
+      [
+        createProjectCost({
+          documentEntry: 'Field Entry',
+          taskName: 'Field Work',
+          taskNumber: 'TASK02',
+          transactionNumber: 1,
+        }),
+        createProjectCost({
+          documentEntry: 'Lab Entry',
+          taskName: 'Lab Work',
+          taskNumber: 'TASK01',
+          transactionNumber: 2,
+        }),
+      ]
+    );
+    server.use(
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ nicknamesEnabled: true, projectCostsEnabled: true })
+      ),
+      http.get('/api/project/nicknames', () =>
+        HttpResponse.json([
+          {
+            nickname: 'Smith startup',
+            projectNumber: 'P1',
+            taskNumber: '',
+            updatedAt: '',
+            updatedBy: null,
+          },
+          {
+            nickname: 'Field kit',
+            projectNumber: 'P1',
+            taskNumber: 'TASK02',
+            updatedAt: '',
+            updatedBy: null,
+          },
+        ])
+      )
+    );
+
+    const { cleanup } = renderRoute({
+      initialPath: '/projectcosts/1000/P1',
+    });
+
+    try {
+      const table = await screen.findByTestId('project-costs-table');
+      expect(
+        await screen.findByRole('heading', { level: 1, name: /Smith startup/ })
+      ).toBeInTheDocument();
+
+      const taskFilter = within(table).getByRole('combobox', { name: 'Task' });
+      await waitFor(() =>
+        expect(
+          within(taskFilter)
+            .getAllByRole('option')
+            .map((option) => option.textContent)
+        ).toEqual(['All Tasks', 'TASK01 - Lab Work', 'TASK02 - Field kit'])
+      );
+
+      await user.hover(within(table).getByText('TASK02'));
+      const tooltip = await screen.findByRole('tooltip');
+      expect(tooltip).toHaveTextContent('Field kit');
+      expect(tooltip).toHaveTextContent('Field Work');
+      await user.unhover(within(table).getByText('TASK02'));
+
+      const searchBox = within(table).getByPlaceholderText(/Search/);
+      await user.type(searchBox, 'Field kit');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
+      await user.clear(searchBox);
+      await user.type(searchBox, 'Field Work');
+      expect(screen.getByText('Field Entry')).toBeInTheDocument();
+      expect(screen.queryByText('Lab Entry')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NicknamesProvider } from '@/components/project/NicknamesProvider.tsx';
 import {
   buildNicknameLookup,
+  nicknamedSource,
   type ProjectNicknameDto,
   useProjectNicknames,
 } from '@/queries/projectNicknames.ts';
@@ -92,6 +93,35 @@ describe('buildNicknameLookup', () => {
   });
 });
 
+describe('nicknamedSource', () => {
+  const source = {
+    projectName: 'Official Project',
+    projectNumber: 'P1',
+    taskName: 'Official Task',
+    taskNumber: 'T1',
+  };
+
+  it('swaps in nicknames and keeps official names searchable', () => {
+    const lookup = buildNicknameLookup(
+      [row('P1', '', 'Smith startup'), row('P1', 'T1', 'Boots')],
+      true
+    );
+    expect(nicknamedSource(lookup, source)).toEqual({
+      officialText: 'Official Project Official Task',
+      projectName: 'Smith startup',
+      taskName: 'Boots',
+    });
+  });
+
+  it('returns official names when there are no nicknames', () => {
+    expect(nicknamedSource(buildNicknameLookup([], true), source)).toEqual({
+      officialText: '',
+      projectName: 'Official Project',
+      taskName: 'Official Task',
+    });
+  });
+});
+
 describe('useProjectNicknames', () => {
   it('is disabled outside the provider', () => {
     render(<Probe />);
@@ -122,9 +152,7 @@ describe('useProjectNicknames', () => {
 
   it('returns nicknames when the flag is on', async () => {
     server.use(
-      http.get('/api/system/features', () =>
-        HttpResponse.json(features(true))
-      ),
+      http.get('/api/system/features', () => HttpResponse.json(features(true))),
       http.get('/api/project/nicknames', () =>
         HttpResponse.json([row('SP001', '', 'Smith startup')])
       )

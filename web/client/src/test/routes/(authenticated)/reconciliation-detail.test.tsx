@@ -21,7 +21,7 @@ const createReconciliationRecord = (
   glActualAmount: -500.25,
   oracleProjectId: 300_000_014_220_069,
   ppmBudBal: 1500.75,
-  ppmBudget: 10000,
+  ppmBudget: 10_000,
   ppmFundCode: '13U02',
   ppmFundDescription: 'COFI University Common Funds',
   ppmItdExp: 8299.25,
@@ -93,9 +93,7 @@ const setupHandlers = (
     http.get('/api/project/gl-ppm-reconciliation', () =>
       HttpResponse.json(reconciliation)
     ),
-    http.get('/api/project/transactions', () =>
-      HttpResponse.json(transactions)
-    )
+    http.get('/api/project/transactions', () => HttpResponse.json(transactions))
   );
 };
 
@@ -282,6 +280,51 @@ describe('reconciliation detail page', () => {
       // Back to all
       await user.click(screen.getByRole('button', { name: 'All' }));
       expect(screen.getByText('GL Transactions (3)')).toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+});
+
+describe('reconciliation detail nicknames', () => {
+  it('shows the task nickname with the official task name beneath', async () => {
+    setupHandlers([createReconciliationRecord()]);
+    server.use(
+      http.get('/api/project/byNumber', () =>
+        HttpResponse.json([
+          {
+            activityCode: '000000',
+            fundCode: '13U02',
+            ppmBudget: 100,
+            ppmExpenses: 0,
+            programCode: '000',
+            projectNumber: 'PROJ001',
+            taskName: 'Official Task',
+            taskNum: 'T001',
+          },
+        ])
+      ),
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ nicknamesEnabled: true })
+      ),
+      http.get('/api/project/nicknames', () =>
+        HttpResponse.json([
+          {
+            nickname: 'Equipment',
+            projectNumber: 'PROJ001',
+            taskNumber: 'T001',
+            updatedAt: '',
+            updatedBy: null,
+          },
+        ])
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      expect(await screen.findByText('Equipment')).toBeInTheDocument();
+      expect(screen.getByText('Official Task')).toBeInTheDocument();
     } finally {
       cleanup();
     }

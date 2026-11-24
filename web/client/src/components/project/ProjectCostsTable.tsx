@@ -6,8 +6,9 @@ import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.ts
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { buildAeCostUrl } from '@/lib/aggieEnterprise.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import type { CsvColumn } from '@/lib/csv.ts';
+import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatDate } from '@/lib/date.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import {
   type ProjectCostRecord,
   projectCostsQueryOptions,
@@ -16,9 +17,15 @@ import { DataTable } from '@/shared/DataTable.tsx';
 import { DatePicker } from '@/shared/DatePicker.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
-const columnHelper = createColumnHelper<ProjectCostRecord>();
+const columnHelper = createColumnHelper<ProjectCostRow>();
 // Export carries every report column, not just the ones shown on the page.
-const projectCostCsvColumns: CsvColumn<ProjectCostRecord>[] = [
+/** A cost row plus its nicknames; empty strings when none are set. */
+type ProjectCostRow = ProjectCostRecord & {
+  projectNickname: string;
+  taskNickname: string;
+};
+
+const projectCostCsvColumns: CsvColumn<ProjectCostRow>[] = [
   { header: 'Transaction Number', key: 'transactionNumber' },
   { header: 'Award Number', key: 'awardNumber' },
   { header: 'Award Name', key: 'awardName' },
@@ -111,8 +118,33 @@ export function ProjectCostsTable({
   projectNumber: string;
   task?: string;
 }) {
-  const { data: projectCostRecords } = useSuspenseQuery(
+  const { data: rawProjectCostRecords } = useSuspenseQuery(
     projectCostsQueryOptions(projectNumber)
+  );
+  const nicknames = useProjectNicknames();
+  const projectCostRecords = useMemo<ProjectCostRow[]>(
+    () =>
+      rawProjectCostRecords.map((record) => ({
+        ...record,
+        projectNickname: nicknames.project(record.projectNumber) ?? '',
+        taskNickname:
+          nicknames.task(record.projectNumber, record.taskNumber) ?? '',
+      })),
+    [nicknames, rawProjectCostRecords]
+  );
+  const csvColumns = useMemo(
+    () =>
+      nicknames.enabled
+        ? insertCsvColumnAfter(
+            insertCsvColumnAfter(projectCostCsvColumns, 'projectName', {
+              header: 'Project Nickname',
+              key: 'projectNickname',
+            }),
+            'taskName',
+            { header: 'Task Nickname', key: 'taskNickname' }
+          )
+        : projectCostCsvColumns,
+    [nicknames.enabled]
   );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
@@ -134,14 +166,19 @@ export function ProjectCostsTable({
       ...(isInternal
         ? [
             columnHelper.accessor(
-              (row) => [row.taskNumber, row.taskName].join(' '),
+              (row) =>
+                [row.taskNumber, row.taskNickname, row.taskName].join(' '),
               {
                 cell: (info) => (
                   <span className="text-sm whitespace-nowrap">
                     <TooltipLabel
                       focusable={false}
                       label={info.row.original.taskNumber}
-                      tooltip={info.row.original.taskName}
+                      tooltip={
+                        info.row.original.taskNickname
+                          ? `${info.row.original.taskNickname} · ${info.row.original.taskName}`
+                          : info.row.original.taskName
+                      }
                     />
                   </span>
                 ),
@@ -241,7 +278,7 @@ export function ProjectCostsTable({
     const taskNames = new Map<string, string>(task ? [[task, '']] : []);
 
     for (const record of projectCostRecords) {
-      taskNames.set(record.taskNumber, record.taskName);
+      taskNames.set(record.taskNumber, record.taskNickname || record.taskName);
     }
 
     return [...taskNames]
@@ -429,7 +466,7 @@ export function ProjectCostsTable({
         tableActions={(table) => (
           <TableExportActions
             baseFilename="project-costs"
-            columns={projectCostCsvColumns}
+            columns={csvColumns}
             data={filteredRecords}
             table={table}
             toRows={(rows) => rows}
