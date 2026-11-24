@@ -4,7 +4,6 @@ import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import { TaskName } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
-import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { useProjectNicknames } from '@/queries/projectNicknames.ts';
@@ -76,7 +75,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-const baseCsvColumns: CsvColumn<AggregatedProject>[] = [
+const csvColumns = [
   { header: 'Project Number', key: 'projectNumber' as const },
   { header: 'Project', key: 'displayName' as const },
   { header: 'Task', key: 'taskNum' as const },
@@ -128,20 +127,6 @@ export function InternalProjectsTable({
         taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
       })),
     [nicknames, records]
-  );
-  const csvColumns = useMemo(
-    () =>
-      nicknames.enabled
-        ? insertCsvColumnAfter(
-            insertCsvColumnAfter(baseCsvColumns, 'displayName', {
-              header: 'Project Nickname',
-              key: 'projectNickname',
-            }),
-            'taskName',
-            { header: 'Task Nickname', key: 'taskNickname' }
-          )
-        : baseCsvColumns,
-    [nicknames.enabled]
   );
   const inactiveCount = useMemo(
     () => allProjects.filter(isInactiveTask).length,

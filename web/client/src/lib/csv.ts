@@ -15,17 +15,6 @@ export interface CsvColumn<T> {
   key: keyof T;
 }
 
-/** Returns the columns with `extra` placed right after the column keyed `afterKey`. */
-export function insertCsvColumnAfter<T>(
-  columns: readonly CsvColumn<T>[],
-  afterKey: keyof T,
-  extra: CsvColumn<T>
-): CsvColumn<T>[] {
-  return columns.flatMap((column) =>
-    column.key === afterKey ? [column, extra] : [column]
-  );
-}
-
 function escapeCsvValue(value: CsvValue): string {
   if (value === null || value === undefined) return '';
   const str = String(value);

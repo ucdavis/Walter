@@ -1,5 +1,4 @@
 import { TaskName } from '@/components/project/NicknamedName.tsx';
-import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
@@ -221,7 +220,7 @@ const glColumns = [
   }),
 ];
 
-const ppmTaskCsvColumns: CsvColumn<PpmTaskRow>[] = [
+const ppmTaskCsvColumns = [
   { header: 'Dept', key: 'projectOwningOrg' as const },
   { header: 'Project', key: 'projectNumber' as const },
   { header: 'Task', key: 'taskNum' as const },
@@ -461,14 +460,7 @@ function RouteComponent() {
               pagination="auto"
               tableActions={
                 <ExportDataButton
-                  columns={
-                    nicknames.enabled
-                      ? insertCsvColumnAfter(ppmTaskCsvColumns, 'taskName', {
-                          header: 'Task Nickname',
-                          key: 'taskNickname',
-                        })
-                      : ppmTaskCsvColumns
-                  }
+                  columns={ppmTaskCsvColumns}
                   data={ppmTasks}
                   filename="ppm-tasks.csv"
                 />

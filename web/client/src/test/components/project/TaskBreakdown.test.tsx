@@ -360,25 +360,13 @@ describe('TaskBreakdown', () => {
       expect(screen.queryByText('Rainy Task')).not.toBeInTheDocument();
     });
 
-    it('adds a Task Nickname column to the export', () => {
+    it('exports official task names only', () => {
       renderWithNicknames();
       fireEvent.click(screen.getByRole('button', { name: 'Export' }));
       const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
-      expect(csv).toContain('Task Name,Task Nickname');
-      expect(csv).toContain('Sunny Task,Equipment');
+      expect(csv).toContain('Sunny Task');
+      expect(csv).not.toContain('Nickname');
+      expect(csv).not.toContain('Equipment');
     });
-  });
-
-  it('leaves the export unchanged when nicknames are off', () => {
-    render(
-      <TaskBreakdown
-        isInternal={false}
-        projectNumber="P1"
-        records={[createProject()]}
-      />
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Export' }));
-    const csv = vi.mocked(downloadExcelCsv).mock.calls[0]?.[0];
-    expect(csv).not.toContain('Task Nickname');
   });
 });

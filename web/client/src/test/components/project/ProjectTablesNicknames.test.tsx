@@ -118,24 +118,14 @@ describe('InternalProjectsTable with nicknames', () => {
     expect(screen.queryByText('T002')).not.toBeInTheDocument();
   });
 
-  it('adds nickname columns to the export', () => {
+  it('exports official names only', () => {
     renderTable();
     const csv = exportedCsv();
-    expect(csv).toContain('Project,Project Nickname');
-    expect(csv).toContain('Task Name,Task Nickname');
-    expect(csv).toContain('Official Sunny Project,Smith startup');
-    expect(csv).toContain('Official Task One,Equipment');
-  });
-
-  it('leaves the export unchanged without nicknames', () => {
-    render(
-      <InternalProjectsTable
-        discrepancies={new Set()}
-        iamId="1000000123"
-        records={records}
-      />
-    );
-    expect(exportedCsv()).not.toContain('Nickname');
+    expect(csv).toContain('Official Sunny Project');
+    expect(csv).toContain('Official Task One');
+    expect(csv).not.toContain('Nickname');
+    expect(csv).not.toContain('Smith startup');
+    expect(csv).not.toContain('Equipment');
   });
 });
 
@@ -170,10 +160,11 @@ describe('SponsoredProjectsTable with nicknames', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('adds a Project Nickname column to the export', () => {
+  it('exports official names only', () => {
     renderTable();
     const csv = exportedCsv();
-    expect(csv).toContain('Project Name,Project Nickname');
-    expect(csv).toContain('Official Sunny Project,Smith startup');
+    expect(csv).toContain('Official Sunny Project');
+    expect(csv).not.toContain('Nickname');
+    expect(csv).not.toContain('Smith startup');
   });
 });

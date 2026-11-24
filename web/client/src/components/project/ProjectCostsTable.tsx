@@ -6,7 +6,7 @@ import { AggieEnterpriseLink } from '@/components/project/AggieEnterpriseLink.ts
 import { projectExpenditureCategoryColor } from '@/components/project/projectChartColors.ts';
 import { buildAeCostUrl } from '@/lib/aggieEnterprise.ts';
 import { formatCurrency } from '@/lib/currency.ts';
-import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
+import type { CsvColumn } from '@/lib/csv.ts';
 import { formatDate } from '@/lib/date.ts';
 import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import {
@@ -18,11 +18,8 @@ import { DatePicker } from '@/shared/DatePicker.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRow>();
-/** A cost row plus its nicknames; empty strings when none are set. */
-type ProjectCostRow = ProjectCostRecord & {
-  projectNickname: string;
-  taskNickname: string;
-};
+/** A cost row plus its task nickname; empty when none is set. */
+type ProjectCostRow = ProjectCostRecord & { taskNickname: string };
 
 // Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRow>[] = [
@@ -126,25 +123,10 @@ export function ProjectCostsTable({
     () =>
       rawProjectCostRecords.map((record) => ({
         ...record,
-        projectNickname: nicknames.project(record.projectNumber) ?? '',
         taskNickname:
           nicknames.task(record.projectNumber, record.taskNumber) ?? '',
       })),
     [nicknames, rawProjectCostRecords]
-  );
-  const csvColumns = useMemo(
-    () =>
-      nicknames.enabled
-        ? insertCsvColumnAfter(
-            insertCsvColumnAfter(projectCostCsvColumns, 'projectName', {
-              header: 'Project Nickname',
-              key: 'projectNickname',
-            }),
-            'taskName',
-            { header: 'Task Nickname', key: 'taskNickname' }
-          )
-        : projectCostCsvColumns,
-    [nicknames.enabled]
   );
   const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
     category ? [category] : []
@@ -466,7 +448,7 @@ export function ProjectCostsTable({
         tableActions={(table) => (
           <TableExportActions
             baseFilename="project-costs"
-            columns={csvColumns}
+            columns={projectCostCsvColumns}
             data={filteredRecords}
             table={table}
             toRows={(rows) => rows}

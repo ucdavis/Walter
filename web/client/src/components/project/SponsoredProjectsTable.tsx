@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
-import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   formatDate,
@@ -125,7 +124,7 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   });
 }
 
-const baseCsvColumns: CsvColumn<AggregatedProject>[] = [
+const csvColumns = [
   { header: 'Project Number', key: 'projectNumber' as const },
   { header: 'Project Name', key: 'displayName' as const },
   { header: 'Type', key: 'projectType' as const },
@@ -184,16 +183,6 @@ export function SponsoredProjectsTable({
     }));
     return sortByEndDate(aggregated);
   }, [nicknames, records]);
-  const csvColumns = useMemo(
-    () =>
-      nicknames.enabled
-        ? insertCsvColumnAfter(baseCsvColumns, 'displayName', {
-            header: 'Project Nickname',
-            key: 'projectNickname',
-          })
-        : baseCsvColumns,
-    [nicknames.enabled]
-  );
 
   const expiredCount = useMemo(
     () => allProjects.filter(isExpired).length,
