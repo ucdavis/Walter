@@ -23,6 +23,8 @@ public sealed class FeatureFlagOptions
 
     public bool ProjectionsEnabled { get; set; }
 
+    public bool NicknamesEnabled { get; set; }
+
     /// <summary>Serves in-memory demo data for ids starting with DEMO. Read once at startup.</summary>
     public bool DemoDataEnabled { get; set; }
 }

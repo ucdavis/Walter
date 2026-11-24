@@ -65,7 +65,8 @@ public class SystemController : ApiControllerBase
             await IsFeatureEnabledAsync(UiFeatureNames.Burndown),
             await IsFeatureEnabledAsync(UiFeatureNames.ExpenditureProgress),
             await IsFeatureEnabledAsync(UiFeatureNames.ProjectCosts),
-            await IsFeatureEnabledAsync(UiFeatureNames.Projections)));
+            await IsFeatureEnabledAsync(UiFeatureNames.Projections),
+            await IsFeatureEnabledAsync(UiFeatureNames.Nicknames)));
     }
 
     /// <summary>Missing definitions are off and visible in operational logs, including after a live deletion.</summary>
@@ -253,4 +254,5 @@ public sealed record ClientFeatures(
     bool BurndownEnabled,
     bool ExpenditureProgressEnabled,
     bool ProjectCostsEnabled,
-    bool ProjectionsEnabled);
+    bool ProjectionsEnabled,
+    bool NicknamesEnabled);

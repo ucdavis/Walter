@@ -16,6 +16,7 @@ const defaultHandlers = [
     HttpResponse.json({
       burndownEnabled: true,
       expenditureProgressEnabled: true,
+      nicknamesEnabled: false,
       projectCostsEnabled: true,
       projectionsEnabled: true,
     })

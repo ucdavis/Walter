@@ -6,6 +6,7 @@ public static class UiFeatureNames
     public const string ExpenditureProgress = "walter.ExpenditureProgressEnabled";
     public const string ProjectCosts = "walter.ProjectCostsEnabled";
     public const string Projections = "walter.ProjectionsEnabled";
+    public const string Nicknames = "walter.NicknamesEnabled";
 
     public static readonly IReadOnlyDictionary<string, string> LegacyNames = new Dictionary<string, string>
     {
@@ -13,5 +14,6 @@ public static class UiFeatureNames
         [nameof(FeatureFlagOptions.ExpenditureProgressEnabled)] = ExpenditureProgress,
         [nameof(FeatureFlagOptions.ProjectCostsEnabled)] = ProjectCosts,
         [nameof(FeatureFlagOptions.ProjectionsEnabled)] = Projections,
+        [nameof(FeatureFlagOptions.NicknamesEnabled)] = Nicknames,
     };
 }

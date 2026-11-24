@@ -44,6 +44,7 @@ public class FeatureManagementTests
             ["FeatureManagement:walter.ExpenditureProgressEnabled"] = "false",
             ["FeatureManagement:walter.ProjectCostsEnabled"] = "true",
             ["FeatureManagement:walter.ProjectionsEnabled"] = "false",
+            ["FeatureManagement:walter.NicknamesEnabled"] = "true",
         });
         host.SignIn();
         var response = await host.Client.GetAsync("/api/system/features");
@@ -57,6 +58,7 @@ public class FeatureManagementTests
             ["expenditureProgressEnabled"] = false,
             ["projectCostsEnabled"] = true,
             ["projectionsEnabled"] = false,
+            ["nicknamesEnabled"] = true,
         });
         (await host.Client.GetAsync("/api/system/emulate/someone")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         host.Client.DefaultRequestHeaders.Add("X-Test-Role", "System");
@@ -69,6 +71,7 @@ public class FeatureManagementTests
     [InlineData("walter.ExpenditureProgressEnabled", "expenditureProgressEnabled")]
     [InlineData("walter.ProjectCostsEnabled", "projectCostsEnabled")]
     [InlineData("walter.ProjectionsEnabled", "projectionsEnabled")]
+    [InlineData("walter.NicknamesEnabled", "nicknamesEnabled")]
     public async Task Each_native_id_controls_only_its_contract_property(string feature, string property)
     {
         await using var host = await FeatureHost.Start(new Dictionary<string, string?>
@@ -189,6 +192,7 @@ public class FeatureManagementTests
             ["FeatureFlags:ExpenditureProgressEnabled"] = "false",
             ["FeatureFlags:ProjectCostsEnabled"] = "false",
             ["FeatureFlags:ProjectionsEnabled"] = "true",
+            ["FeatureFlags:NicknamesEnabled"] = "true",
         };
         var nativeOverrides = new Dictionary<string, bool>
         {
@@ -196,6 +200,7 @@ public class FeatureManagementTests
             ["walter.ExpenditureProgressEnabled"] = true,
             ["walter.ProjectCostsEnabled"] = true,
             ["walter.ProjectionsEnabled"] = false,
+            ["walter.NicknamesEnabled"] = false,
         };
         var index = 0;
         foreach (var flag in nativeOverrides)
@@ -215,11 +220,12 @@ public class FeatureManagementTests
         {
             ["burndownEnabled"] = true, ["expenditureProgressEnabled"] = false,
             ["projectCostsEnabled"] = false, ["projectionsEnabled"] = true,
+            ["nicknamesEnabled"] = true,
         });
     }
 
     [Fact]
-    public async Task Development_file_keeps_all_four_local_defaults_enabled_without_Azure()
+    public async Task Development_file_keeps_all_local_defaults_enabled_without_Azure()
     {
         var root = new DirectoryInfo(AppContext.BaseDirectory);
         while (root is not null && !File.Exists(Path.Combine(root.FullName, "server", "appsettings.Development.json")))
