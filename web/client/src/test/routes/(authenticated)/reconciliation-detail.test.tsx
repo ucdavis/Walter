@@ -289,7 +289,7 @@ describe('reconciliation detail page', () => {
 });
 
 describe('reconciliation detail nicknames', () => {
-  it('shows the task nickname with the official task name beneath', async () => {
+  it('shows the task nickname and hides the official task name', async () => {
     setupHandlers([createReconciliationRecord()]);
     server.use(
       http.get('/api/project/byNumber', () =>
@@ -324,7 +324,7 @@ describe('reconciliation detail nicknames', () => {
 
     try {
       expect(await screen.findByText('Equipment')).toBeInTheDocument();
-      expect(screen.getByText('Official Task')).toBeInTheDocument();
+      expect(screen.queryByText('Official Task')).not.toBeInTheDocument();
     } finally {
       cleanup();
     }

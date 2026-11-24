@@ -45,12 +45,20 @@ it('ProjectName renders only the official name when there is no nickname', () =>
   expect(container).toHaveTextContent(/^Official Project Name$/);
 });
 
-it('TaskName shows the nickname with the official name beneath', () => {
+it('TaskName shows the nickname and the official name only on hover', async () => {
   withNicknames(
     <TaskName name="Official Task" projectNumber="SP001" taskNumber="TASK01" />
   );
-  expect(screen.getByText('Equipment')).toBeInTheDocument();
-  expect(screen.getByText('Official Task')).toBeInTheDocument();
+  expect(screen.queryByText('Official Task')).not.toBeInTheDocument();
+  await userEvent.setup().hover(screen.getByText('Equipment'));
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('Official Task');
+});
+
+it('TaskName shows the official name when there is no nickname', () => {
+  const { container } = withNicknames(
+    <TaskName name="Official Task" projectNumber="SP001" taskNumber="TASK09" />
+  );
+  expect(container).toHaveTextContent(/^Official Task$/);
 });
 
 it('TaskName renders nothing when there is no name and no nickname', () => {

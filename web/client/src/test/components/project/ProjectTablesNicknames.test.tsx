@@ -97,11 +97,12 @@ describe('InternalProjectsTable with nicknames', () => {
       />
     );
 
-  it('shows project and task nicknames with the official task name', () => {
+  it('shows project and task nicknames and hides the official task name', () => {
     renderTable();
     expect(screen.getByText('Smith startup')).toBeInTheDocument();
     expect(screen.getByText('Equipment')).toBeInTheDocument();
-    expect(screen.getByText('Official Task One')).toBeInTheDocument();
+    expect(screen.queryByText('Official Task One')).not.toBeInTheDocument();
+    expect(screen.getByText('Official Task Two')).toBeInTheDocument();
   });
 
   it('finds the row by nickname and by official name', () => {

@@ -62,10 +62,11 @@ interface TaskNameProps {
   taskNumber: string;
 }
 
+// A nicknamed task shows its official name on hover unless the caller asks for it beneath.
 export function TaskName({
   name,
   projectNumber,
-  secondary = 'below',
+  secondary = 'tooltip',
   taskNumber,
 }: TaskNameProps) {
   const nickname = useProjectNicknames().task(projectNumber, taskNumber);

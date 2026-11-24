@@ -340,17 +340,20 @@ describe('TaskBreakdown', () => {
         </NicknamesContext.Provider>
       );
 
-    it('shows the task nickname with the official task name beneath', () => {
+    it('shows the task nickname and the official task name only on hover', async () => {
       renderWithNicknames();
-      expect(screen.getByText('Equipment')).toBeInTheDocument();
-      expect(screen.getByText('Sunny Task')).toBeInTheDocument();
+      expect(screen.queryByText('Sunny Task')).not.toBeInTheDocument();
       expect(screen.getByText('Rainy Task')).toBeInTheDocument();
+      await userEvent.setup().hover(screen.getByText('Equipment'));
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        'Sunny Task'
+      );
     });
 
     it('finds a task by nickname and by official name', () => {
       renderWithNicknames();
       search('Equipment');
-      expect(screen.getByText('Sunny Task')).toBeInTheDocument();
+      expect(screen.getByText('T001')).toBeInTheDocument();
       expect(screen.queryByText('Rainy Task')).not.toBeInTheDocument();
       search('Sunny');
       expect(screen.getByText('Equipment')).toBeInTheDocument();
