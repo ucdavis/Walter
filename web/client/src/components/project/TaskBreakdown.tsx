@@ -9,7 +9,7 @@ import {
 import { NicknameEditor } from '@/components/project/NicknameEditor.tsx';
 import { TaskName } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
-import type { CsvColumn } from '@/lib/csv.ts';
+import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
 import { useProjectNicknames } from '@/queries/projectNicknames.ts';
@@ -150,19 +150,16 @@ export function TaskBreakdown({
       })),
     [nicknames, projectNumber, records]
   );
-  const csvColumns = useMemo(() => {
-    if (!nicknames.enabled) {
-      return baseCsvColumns;
-    }
-    const columns: CsvColumn<TaskBreakdownRow>[] = [];
-    for (const column of baseCsvColumns) {
-      columns.push(column);
-      if (column.key === 'taskName') {
-        columns.push({ header: 'Task Nickname', key: 'taskNickname' });
-      }
-    }
-    return columns;
-  }, [nicknames.enabled]);
+  const csvColumns = useMemo(
+    () =>
+      nicknames.enabled
+        ? insertCsvColumnAfter(baseCsvColumns, 'taskName', {
+            header: 'Task Nickname',
+            key: 'taskNickname',
+          })
+        : baseCsvColumns,
+    [nicknames.enabled]
+  );
   const hiddenCount = useMemo(
     () => allRows.filter(isHiddenByDefault).length,
     [allRows]

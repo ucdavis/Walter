@@ -15,22 +15,39 @@ export interface CsvColumn<T> {
   key: keyof T;
 }
 
+/** Returns the columns with `extra` placed right after the column keyed `afterKey`. */
+export function insertCsvColumnAfter<T>(
+  columns: readonly CsvColumn<T>[],
+  afterKey: keyof T,
+  extra: CsvColumn<T>
+): CsvColumn<T>[] {
+  return columns.flatMap((column) =>
+    column.key === afterKey ? [column, extra] : [column]
+  );
+}
+
 function escapeCsvValue(value: CsvValue): string {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) {
+    return '';
+  }
   const str = String(value);
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
+    return `"${str.replaceAll('"', '""')}"`;
   }
   return str;
 }
 
 const defaultFormat = (value: unknown): string => {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) {
+    return '';
+  }
   return String(value);
 };
 
 function formatDateCsv(value: unknown): string {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) {
+    return '';
+  }
   try {
     return format(parseISO(String(value)), 'MM/dd/yyyy');
   } catch {
@@ -39,18 +56,26 @@ function formatDateCsv(value: unknown): string {
 }
 
 function formatCurrencyCsv(value: unknown): string {
-  if (value === null || value === undefined) return '';
+  if (value === null || value === undefined) {
+    return '';
+  }
   const amount = Number(value);
-  if (!Number.isFinite(amount)) return '';
+  if (!Number.isFinite(amount)) {
+    return '';
+  }
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
     maximumFractionDigits: 6,
+    minimumFractionDigits: 2,
   }).format(amount);
 }
 
 function resolveFormat(fmt?: CsvFormat): (value: unknown) => string {
-  if (fmt === 'date') return formatDateCsv;
-  if (fmt === 'currency') return formatCurrencyCsv;
+  if (fmt === 'date') {
+    return formatDateCsv;
+  }
+  if (fmt === 'currency') {
+    return formatCurrencyCsv;
+  }
   return defaultFormat;
 }
 
@@ -73,10 +98,7 @@ export function toCsv<T>(
   return options?.includeBom ? `\ufeff${csv}` : csv;
 }
 
-export function toExcelCsv<T>(
-  rows: T[],
-  columns: CsvColumn<T>[]
-): string {
+export function toExcelCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
   return toCsv(rows, columns, { includeBom: true, lineEnding: '\r\n' });
 }
 

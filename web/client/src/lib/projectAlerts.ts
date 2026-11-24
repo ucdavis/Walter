@@ -1,3 +1,4 @@
+import type { NicknameLookup } from '@/queries/projectNicknames.ts';
 import {
   summarizeProjectByNumber,
   type ProjectSummary,
@@ -104,7 +105,8 @@ export interface PiProjectAlert extends Alert {
  * Returns top 3 alerts sorted by severity (errors first) then by balance.
  */
 export function getPiProjectAlerts(
-  managedPis: PiWithProjects[]
+  managedPis: PiWithProjects[],
+  nicknames?: NicknameLookup
 ): PiProjectAlert[] {
   const alerts: PiProjectAlert[] = [];
 
@@ -124,7 +126,7 @@ export function getPiProjectAlerts(
 
       const projectAlerts = getAlertsForProject(
         summary,
-        `${pi.name} - ${summary.projectNumber} ${summary.displayName} `
+        `${pi.name} - ${summary.projectNumber} ${nicknames?.project(summary.projectNumber) ?? summary.displayName} `
       );
 
       for (const alert of projectAlerts) {
@@ -152,7 +154,8 @@ export function getPiProjectAlerts(
  */
 export function getProjectListAlerts(
   projects: ProjectRecord[],
-  employeeId: string
+  employeeId: string,
+  nicknames?: NicknameLookup
 ): PiProjectAlert[] {
   const today = getLocalDateOnly();
   const active = projects.filter((p) => {
@@ -181,7 +184,7 @@ export function getProjectListAlerts(
 
     for (const alert of getAlertsForProject(
       summary,
-      `${summary.projectNumber} ${summary.displayName} `
+      `${summary.projectNumber} ${nicknames?.project(summary.projectNumber) ?? summary.displayName} `
     )) {
       alerts.push({
         ...alert,

@@ -5,6 +5,7 @@ import {
 } from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { buildNicknameLookup } from '@/queries/projectNicknames.ts';
 
 const createSummary = (
   overrides: Partial<ProjectSummary> = {}
@@ -47,7 +48,7 @@ const createSummary = (
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: null,
   taskNum: null,
-  totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
+  totals: { balance: 5000, budget: 10_000, encumbrance: 0, expense: 5000 },
   ...overrides,
 });
 
@@ -63,7 +64,7 @@ const createProject = (overrides: Partial<ProjectRecord> = {}): ProjectRecord =>
     awardType: null,
     balance: 5000,
     billingCycle: null,
-    budget: 10000,
+    budget: 10_000,
     commitments: 0,
     contractAdministrator: null,
     copi: null,
@@ -101,7 +102,12 @@ afterEach(() => {
 describe('getAlertsForProject', () => {
   it('returns error alert for negative balance', () => {
     const summary = createSummary({
-      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+      totals: {
+        balance: -500,
+        budget: 10_000,
+        encumbrance: 0,
+        expense: 10_500,
+      },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -112,7 +118,7 @@ describe('getAlertsForProject', () => {
 
   it('returns warning alert for low budget (<10%)', () => {
     const summary = createSummary({
-      totals: { balance: 900, budget: 10000, encumbrance: 0, expense: 9100 },
+      totals: { balance: 900, budget: 10_000, encumbrance: 0, expense: 9100 },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -143,7 +149,12 @@ describe('getAlertsForProject', () => {
 
   it('uses custom prefix in message', () => {
     const summary = createSummary({
-      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
+      totals: {
+        balance: -500,
+        budget: 10_000,
+        encumbrance: 0,
+        expense: 10_500,
+      },
     });
     const alerts = getAlertsForProject(summary, 'My Project ');
 
@@ -206,5 +217,39 @@ describe('getProjectListAlerts', () => {
       projectNumber: 'TODAY',
       type: 'negative-balance',
     });
+  });
+});
+
+describe('alert text with nicknames', () => {
+  const projects = [
+    createProject({
+      balance: -500,
+      displayName: 'Official Name',
+      expenses: 10_500,
+      projectNumber: 'SP001',
+    }),
+  ];
+
+  it('uses the project nickname when one is set', () => {
+    const nicknames = buildNicknameLookup(
+      [
+        {
+          nickname: 'Smith startup',
+          projectNumber: 'SP001',
+          taskNumber: '',
+          updatedAt: '',
+          updatedBy: null,
+        },
+      ],
+      true
+    );
+    const [alert] = getProjectListAlerts(projects, 'E1', nicknames);
+    expect(alert.message).toContain('SP001 Smith startup ');
+    expect(alert.message).not.toContain('Official Name');
+  });
+
+  it('is unchanged without a lookup', () => {
+    const [alert] = getProjectListAlerts(projects, 'E1');
+    expect(alert.message).toContain('SP001 Official Name ');
   });
 });

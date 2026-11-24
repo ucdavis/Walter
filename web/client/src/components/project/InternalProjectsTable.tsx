@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { TaskName } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
+import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -14,10 +17,14 @@ interface AggregatedProject {
   pi: string | null;
   pm: string | null;
   projectName: string;
+  /** Empty when the project has no nickname. */
+  projectNickname: string;
   projectNumber: string;
   projectOwningOrg: string;
   projectStatusCode: string;
   taskName: string;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
   taskStatus: string;
   totalBalance: number;
@@ -50,10 +57,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pi: p.pi,
         pm: p.pm,
         projectName: p.projectName,
+        projectNickname: '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
         taskName: p.taskName,
+        taskNickname: '',
         taskNum: p.taskNum,
         taskStatus: p.taskStatus,
         totalBalance: p.balance,
@@ -67,7 +76,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
   return Array.from(projectsMap.values());
 }
 
-const csvColumns = [
+const baseCsvColumns: CsvColumn<AggregatedProject>[] = [
   { header: 'Project Number', key: 'projectNumber' as const },
   { header: 'Project', key: 'displayName' as const },
   { header: 'Task', key: 'taskNum' as const },
@@ -110,7 +119,30 @@ export function InternalProjectsTable({
   records,
 }: InternalProjectsTableProps) {
   const [showInactive, setShowInactive] = useState(false);
-  const allProjects = useMemo(() => aggregateProjects(records), [records]);
+  const nicknames = useProjectNicknames();
+  const allProjects = useMemo(
+    () =>
+      aggregateProjects(records).map((p) => ({
+        ...p,
+        projectNickname: nicknames.project(p.projectNumber) ?? '',
+        taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
+      })),
+    [nicknames, records]
+  );
+  const csvColumns = useMemo(
+    () =>
+      nicknames.enabled
+        ? insertCsvColumnAfter(
+            insertCsvColumnAfter(baseCsvColumns, 'displayName', {
+              header: 'Project Nickname',
+              key: 'projectNickname',
+            }),
+            'taskName',
+            { header: 'Task Nickname', key: 'taskNickname' }
+          )
+        : baseCsvColumns,
+    [nicknames.enabled]
+  );
   const inactiveCount = useMemo(
     () => allProjects.filter(isInactiveTask).length,
     [allProjects]
@@ -148,12 +180,17 @@ export function InternalProjectsTable({
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
       columnHelper.accessor(
-        (row) => `${row.displayName} ${row.projectNumber}`,
+        (row) =>
+          `${row.projectNickname} ${row.displayName} ${row.projectNumber}`.trim(),
         {
           cell: (info) => {
-            const { displayName: name, projectNumber } = info.row.original;
+            const {
+              displayName: name,
+              projectNickname,
+              projectNumber,
+            } = info.row.original;
             return (
-              <div className="flex items-start gap-1">
+              <div className="flex flex-wrap items-start gap-x-1">
                 <TooltipLabel
                   asChild
                   label={
@@ -187,6 +224,11 @@ export function InternalProjectsTable({
                     tooltip={tooltipDefinitions.reconciliationDiscrepancy}
                   />
                 )}
+                {projectNickname && (
+                  <div className="w-full text-xs text-base-content/80">
+                    {projectNickname}
+                  </div>
+                )}
               </div>
             );
           },
@@ -195,21 +237,30 @@ export function InternalProjectsTable({
           id: 'displayName',
         }
       ),
-      columnHelper.accessor('taskNum', {
-        cell: (info) => (
-          <div>
-            <div>{info.getValue()}</div>
-            {info.row.original.taskName && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.taskName}
-              </div>
-            )}
-          </div>
-        ),
-        footer: () => '',
-        header: 'Task',
-        minSize: 200,
-      }),
+      columnHelper.accessor(
+        (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
+        {
+          cell: (info) => (
+            <div>
+              <div>{info.row.original.taskNum}</div>
+              {(info.row.original.taskName ||
+                info.row.original.taskNickname) && (
+                <div className="text-xs text-base-content/80">
+                  <TaskName
+                    name={info.row.original.taskName || null}
+                    projectNumber={info.row.original.projectNumber}
+                    taskNumber={info.row.original.taskNum}
+                  />
+                </div>
+              )}
+            </div>
+          ),
+          footer: () => '',
+          header: 'Task',
+          id: 'taskNum',
+          minSize: 200,
+        }
+      ),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
           <span className="flex justify-end">

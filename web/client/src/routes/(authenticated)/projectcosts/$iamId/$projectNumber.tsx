@@ -1,3 +1,4 @@
+import { ProjectName } from '@/components/project/NicknamedName.tsx';
 import { ProjectCostsTable } from '@/components/project/ProjectCostsTable.tsx';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -130,7 +131,13 @@ function RouteComponent() {
             <TableCellsIcon aria-hidden="true" className="size-4 shrink-0" />
             Project Costs
           </p>
-          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
+          <h1 className="h1 max-w-5xl">
+            <ProjectName
+              name={summary.displayName}
+              projectNumber={summary.projectNumber}
+              secondary="tooltip"
+            />
+          </h1>
         </section>
 
         {featureFlags.projectCostsEnabled ? (

@@ -136,6 +136,8 @@ describe('project detail page', () => {
           name: /Smith startup/,
         });
         expect(heading).toHaveTextContent('Test Project');
+        // Title plus sidebar entry.
+        expect(screen.getAllByText('Smith startup').length).toBeGreaterThan(1);
         expect(
           screen.getByRole('button', { name: 'Edit nickname for Test Project' })
         ).toBeInTheDocument();

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
+import { type CsvColumn, insertCsvColumnAfter } from '@/lib/csv.ts';
 import { formatCurrency } from '@/lib/currency.ts';
 import {
   formatDate,
@@ -10,6 +11,7 @@ import {
   parseProjectDate,
 } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -25,6 +27,8 @@ interface AggregatedProject {
   pm: string | null;
   primarySponsorName: string | null;
   projectName: string;
+  /** Empty when the project has no nickname. */
+  projectNickname: string;
   projectNumber: string;
   projectOwningOrg: string;
   projectStatusCode: string;
@@ -72,6 +76,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pm: p.pm,
         primarySponsorName: p.primarySponsorName,
         projectName: p.projectName,
+        projectNickname: '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
@@ -120,7 +125,7 @@ function sortByEndDate(projects: AggregatedProject[]): AggregatedProject[] {
   });
 }
 
-const csvColumns = [
+const baseCsvColumns: CsvColumn<AggregatedProject>[] = [
   { header: 'Project Number', key: 'projectNumber' as const },
   { header: 'Project Name', key: 'displayName' as const },
   { header: 'Type', key: 'projectType' as const },
@@ -171,10 +176,24 @@ export function SponsoredProjectsTable({
 }: SponsoredProjectsTableProps) {
   const [showExpired, setShowExpired] = useState(false);
 
+  const nicknames = useProjectNicknames();
   const allProjects = useMemo(() => {
-    const aggregated = aggregateProjects(records);
+    const aggregated = aggregateProjects(records).map((p) => ({
+      ...p,
+      projectNickname: nicknames.project(p.projectNumber) ?? '',
+    }));
     return sortByEndDate(aggregated);
-  }, [records]);
+  }, [nicknames, records]);
+  const csvColumns = useMemo(
+    () =>
+      nicknames.enabled
+        ? insertCsvColumnAfter(baseCsvColumns, 'displayName', {
+            header: 'Project Nickname',
+            key: 'projectNickname',
+          })
+        : baseCsvColumns,
+    [nicknames.enabled]
+  );
 
   const expiredCount = useMemo(
     () => allProjects.filter(isExpired).length,
@@ -212,10 +231,15 @@ export function SponsoredProjectsTable({
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
       columnHelper.accessor(
-        (row) => `${row.displayName} ${row.projectNumber}`,
+        (row) =>
+          `${row.projectNickname} ${row.displayName} ${row.projectNumber}`.trim(),
         {
           cell: (info) => {
-            const { displayName: name, projectNumber } = info.row.original;
+            const {
+              displayName: name,
+              projectNickname,
+              projectNumber,
+            } = info.row.original;
             return (
               <TooltipLabel
                 asChild
@@ -229,7 +253,14 @@ export function SponsoredProjectsTable({
                       <div className="text-xs text-base-content/70 no-underline">
                         {projectNumber}
                       </div>
-                      <div className="truncate underline">{name}</div>
+                      <div className="truncate underline">
+                        {projectNickname || name}
+                      </div>
+                      {projectNickname && (
+                        <div className="truncate text-xs text-base-content/80 no-underline">
+                          {name}
+                        </div>
+                      )}
                     </div>
                   </Link>
                 }
