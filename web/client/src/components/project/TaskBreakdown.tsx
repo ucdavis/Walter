@@ -206,24 +206,26 @@ export function TaskBreakdown({
                   </span>
                 )}
               </div>
-              {(info.row.original.taskName ||
-                info.row.original.taskNickname) && (
-                <div className="text-xs text-base-content/80">
-                  <Nicknamed
-                    name={info.row.original.taskName || null}
-                    nickname={info.row.original.taskNickname}
-                    secondary="tooltip"
+              <div className="flex flex-wrap items-center gap-x-1">
+                {(info.row.original.taskName ||
+                  info.row.original.taskNickname) && (
+                  <div className="text-xs text-base-content/80">
+                    <Nicknamed
+                      name={info.row.original.taskName || null}
+                      nickname={info.row.original.taskNickname}
+                      secondary="tooltip"
+                    />
+                  </div>
+                )}
+                {iamId && info.row.original.taskNum && (
+                  <NicknameEditor
+                    iamId={iamId}
+                    officialName={`task ${info.row.original.taskNum}`}
+                    projectNumber={projectNumber}
+                    taskNumber={info.row.original.taskNum}
                   />
-                </div>
-              )}
-              {iamId && info.row.original.taskNum && (
-                <NicknameEditor
-                  iamId={iamId}
-                  officialName={`task ${info.row.original.taskNum}`}
-                  projectNumber={projectNumber}
-                  taskNumber={info.row.original.taskNum}
-                />
-              )}
+                )}
+              </div>
             </div>
           ),
           footer: () => 'Totals',
