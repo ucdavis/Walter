@@ -1,3 +1,4 @@
+import { ProjectName } from '@/components/project/NicknamedName.tsx';
 import { ProjectBurndownSection } from '@/components/project/ProjectBurndownChart.tsx';
 import { ProjectPortfolioLayout } from '@/components/project/ProjectPortfolioLayout.tsx';
 import { PageEmpty } from '@/components/states/PageEmpty.tsx';
@@ -107,7 +108,13 @@ function RouteComponent() {
             />
             Project Burndown
           </p>
-          <h1 className="h1 max-w-5xl">{summary.displayName}</h1>
+          <h1 className="h1 max-w-5xl">
+            <ProjectName
+              name={summary.displayName}
+              projectNumber={summary.projectNumber}
+              secondary="tooltip"
+            />
+          </h1>
         </section>
 
         {expired ? (

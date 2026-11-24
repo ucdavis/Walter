@@ -10,6 +10,10 @@ import {
   parseProjectDate,
 } from '@/lib/date.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -25,6 +29,8 @@ interface AggregatedProject {
   pm: string | null;
   primarySponsorName: string | null;
   projectName: string;
+  /** Empty when the project has no nickname. */
+  projectNickname: string;
   projectNumber: string;
   projectOwningOrg: string;
   projectStatusCode: string;
@@ -37,7 +43,10 @@ interface AggregatedProject {
 
 const columnHelper = createColumnHelper<AggregatedProject>();
 
-function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
+function aggregateProjects(
+  records: ProjectRecord[],
+  nicknames: NicknameLookup
+): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
 
   for (const p of records) {
@@ -72,6 +81,7 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pm: p.pm,
         primarySponsorName: p.primarySponsorName,
         projectName: p.projectName,
+        projectNickname: nicknames.project(p.projectNumber) ?? '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
@@ -171,10 +181,11 @@ export function SponsoredProjectsTable({
 }: SponsoredProjectsTableProps) {
   const [showExpired, setShowExpired] = useState(false);
 
+  const nicknames = useProjectNicknames();
   const allProjects = useMemo(() => {
-    const aggregated = aggregateProjects(records);
+    const aggregated = aggregateProjects(records, nicknames);
     return sortByEndDate(aggregated);
-  }, [records]);
+  }, [nicknames, records]);
 
   const expiredCount = useMemo(
     () => allProjects.filter(isExpired).length,
@@ -212,10 +223,15 @@ export function SponsoredProjectsTable({
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
       columnHelper.accessor(
-        (row) => `${row.displayName} ${row.projectNumber}`,
+        (row) =>
+          `${row.projectNickname} ${row.displayName} ${row.projectNumber}`.trim(),
         {
           cell: (info) => {
-            const { displayName: name, projectNumber } = info.row.original;
+            const {
+              displayName: name,
+              projectNickname,
+              projectNumber,
+            } = info.row.original;
             return (
               <TooltipLabel
                 asChild
@@ -229,7 +245,14 @@ export function SponsoredProjectsTable({
                       <div className="text-xs text-base-content/70 no-underline">
                         {projectNumber}
                       </div>
-                      <div className="truncate underline">{name}</div>
+                      <div className="truncate underline">
+                        {projectNickname || name}
+                      </div>
+                      {projectNickname && (
+                        <div className="truncate text-xs text-base-content/80 no-underline">
+                          {name}
+                        </div>
+                      )}
                     </div>
                   </Link>
                 }

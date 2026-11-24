@@ -75,6 +75,7 @@ public class AzureFeatureConfigurationTests
         string[] names = [
             "walter.BurndownEnabled", "walter.ExpenditureProgressEnabled",
             "walter.ProjectCostsEnabled", "walter.ProjectionsEnabled",
+            "walter.NicknamesEnabled",
         ];
         var client = new StoreClient(names.Select(name => Flag(name, "Test")).ToArray())
         {

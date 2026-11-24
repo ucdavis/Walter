@@ -2,9 +2,14 @@ import { useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { createColumnHelper } from '@tanstack/react-table';
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -14,10 +19,14 @@ interface AggregatedProject {
   pi: string | null;
   pm: string | null;
   projectName: string;
+  /** Empty when the project has no nickname. */
+  projectNickname: string;
   projectNumber: string;
   projectOwningOrg: string;
   projectStatusCode: string;
   taskName: string;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
   taskStatus: string;
   totalBalance: number;
@@ -32,7 +41,10 @@ function isInactiveTask(row: AggregatedProject): boolean {
 
 const columnHelper = createColumnHelper<AggregatedProject>();
 
-function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
+function aggregateProjects(
+  records: ProjectRecord[],
+  nicknames: NicknameLookup
+): AggregatedProject[] {
   const projectsMap = new Map<string, AggregatedProject>();
 
   for (const p of records) {
@@ -50,10 +62,12 @@ function aggregateProjects(records: ProjectRecord[]): AggregatedProject[] {
         pi: p.pi,
         pm: p.pm,
         projectName: p.projectName,
+        projectNickname: nicknames.project(p.projectNumber) ?? '',
         projectNumber: p.projectNumber,
         projectOwningOrg: p.projectOwningOrg,
         projectStatusCode: p.projectStatusCode,
         taskName: p.taskName,
+        taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
         taskNum: p.taskNum,
         taskStatus: p.taskStatus,
         totalBalance: p.balance,
@@ -110,7 +124,11 @@ export function InternalProjectsTable({
   records,
 }: InternalProjectsTableProps) {
   const [showInactive, setShowInactive] = useState(false);
-  const allProjects = useMemo(() => aggregateProjects(records), [records]);
+  const nicknames = useProjectNicknames();
+  const allProjects = useMemo(
+    () => aggregateProjects(records, nicknames),
+    [nicknames, records]
+  );
   const inactiveCount = useMemo(
     () => allProjects.filter(isInactiveTask).length,
     [allProjects]
@@ -148,12 +166,17 @@ export function InternalProjectsTable({
       // either — the cell visibly renders both, but TanStack only filters
       // accessor values, not rendered output.
       columnHelper.accessor(
-        (row) => `${row.displayName} ${row.projectNumber}`,
+        (row) =>
+          `${row.projectNickname} ${row.displayName} ${row.projectNumber}`.trim(),
         {
           cell: (info) => {
-            const { displayName: name, projectNumber } = info.row.original;
+            const {
+              displayName: name,
+              projectNickname,
+              projectNumber,
+            } = info.row.original;
             return (
-              <div className="flex items-start gap-1">
+              <div className="flex flex-wrap items-start gap-x-1">
                 <TooltipLabel
                   asChild
                   label={
@@ -187,6 +210,11 @@ export function InternalProjectsTable({
                     tooltip={tooltipDefinitions.reconciliationDiscrepancy}
                   />
                 )}
+                {projectNickname && (
+                  <div className="w-full text-xs text-base-content/80">
+                    {projectNickname}
+                  </div>
+                )}
               </div>
             );
           },
@@ -195,21 +223,30 @@ export function InternalProjectsTable({
           id: 'displayName',
         }
       ),
-      columnHelper.accessor('taskNum', {
-        cell: (info) => (
-          <div>
-            <div>{info.getValue()}</div>
-            {info.row.original.taskName && (
-              <div className="text-xs text-base-content/80">
-                {info.row.original.taskName}
-              </div>
-            )}
-          </div>
-        ),
-        footer: () => '',
-        header: 'Task',
-        minSize: 200,
-      }),
+      columnHelper.accessor(
+        (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
+        {
+          cell: (info) => (
+            <div>
+              <div>{info.row.original.taskNum}</div>
+              {(info.row.original.taskName ||
+                info.row.original.taskNickname) && (
+                <div className="text-xs text-base-content/80">
+                  <Nicknamed
+                    name={info.row.original.taskName || null}
+                    nickname={info.row.original.taskNickname}
+                    secondary="tooltip"
+                  />
+                </div>
+              )}
+            </div>
+          ),
+          footer: () => '',
+          header: 'Task',
+          id: 'taskNum',
+          minSize: 200,
+        }
+      ),
       columnHelper.accessor('totalBudget', {
         cell: (info) => (
           <span className="flex justify-end">

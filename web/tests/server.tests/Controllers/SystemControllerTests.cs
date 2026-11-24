@@ -145,15 +145,16 @@ public class SystemControllerTests
     }
 
     [Theory]
-    [InlineData(true, true, true, false)]
-    [InlineData(true, false, false, true)]
-    [InlineData(false, true, false, false)]
-    [InlineData(false, false, true, true)]
+    [InlineData(true, true, true, false, true)]
+    [InlineData(true, false, false, true, false)]
+    [InlineData(false, true, false, false, true)]
+    [InlineData(false, false, true, true, false)]
     public async Task GetFeatures_reflects_the_configured_flags(
         bool burndownEnabled,
         bool expenditureProgressEnabled,
         bool projectCostsEnabled,
-        bool projectionsEnabled)
+        bool projectionsEnabled,
+        bool nicknamesEnabled)
     {
         using AppDbContext ctx = TestDbContextFactory.CreateInMemory();
 
@@ -165,6 +166,7 @@ public class SystemControllerTests
                 ExpenditureProgressEnabled = expenditureProgressEnabled,
                 ProjectCostsEnabled = projectCostsEnabled,
                 ProjectionsEnabled = projectionsEnabled,
+                NicknamesEnabled = nicknamesEnabled,
             });
 
         var result = await controller.GetFeatures();
@@ -174,7 +176,8 @@ public class SystemControllerTests
                 burndownEnabled,
                 expenditureProgressEnabled,
                 projectCostsEnabled,
-                projectionsEnabled));
+                projectionsEnabled,
+                nicknamesEnabled));
     }
 
     [Fact]
@@ -396,6 +399,7 @@ public class SystemControllerTests
             ["FeatureFlags:ExpenditureProgressEnabled"] = configuredFlags.ExpenditureProgressEnabled.ToString(),
             ["FeatureFlags:ProjectCostsEnabled"] = configuredFlags.ProjectCostsEnabled.ToString(),
             ["FeatureFlags:ProjectionsEnabled"] = configuredFlags.ProjectionsEnabled.ToString(),
+            ["FeatureFlags:NicknamesEnabled"] = configuredFlags.NicknamesEnabled.ToString(),
         });
         var userService = new UserService(NullLogger<UserService>.Instance, ctx);
         services.AddSingleton<IUserService>(userService);

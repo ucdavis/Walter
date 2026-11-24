@@ -10,6 +10,7 @@ vi.mock('@/shared/auth/UserContext.tsx', () => ({ useUser: () => user }));
 const flags = (enabled: boolean) => ({
   burndownEnabled: enabled,
   expenditureProgressEnabled: enabled,
+  nicknamesEnabled: enabled,
   projectCostsEnabled: enabled,
   projectionsEnabled: enabled,
 });

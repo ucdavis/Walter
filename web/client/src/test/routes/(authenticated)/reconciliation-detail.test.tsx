@@ -287,3 +287,46 @@ describe('reconciliation detail page', () => {
     }
   });
 });
+
+describe('reconciliation detail nicknames', () => {
+  it('shows the task nickname and hides the official task name', async () => {
+    setupHandlers([createReconciliationRecord()]);
+    server.use(
+      http.get('/api/project/byNumber', () =>
+        HttpResponse.json([
+          {
+            activityCode: '000000',
+            fundCode: '13U02',
+            ppmBudget: 100,
+            ppmExpenses: 0,
+            programCode: '000',
+            projectNumber: 'PROJ001',
+            taskName: 'Official Task',
+            taskNum: 'T001',
+          },
+        ])
+      ),
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ nicknamesEnabled: true })
+      ),
+      http.get('/api/project/nicknames', () =>
+        HttpResponse.json([
+          {
+            nickname: 'Equipment',
+            projectNumber: 'PROJ001',
+            taskNumber: 'T001',
+          },
+        ])
+      )
+    );
+
+    const { cleanup } = renderRoute({ initialPath: detailPath });
+
+    try {
+      expect(await screen.findByText('Equipment')).toBeInTheDocument();
+      expect(screen.queryByText('Official Task')).not.toBeInTheDocument();
+    } finally {
+      cleanup();
+    }
+  });
+});

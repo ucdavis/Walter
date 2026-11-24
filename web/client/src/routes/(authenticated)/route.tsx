@@ -8,6 +8,7 @@ import { RouterContext } from '../../main.tsx';
 import { meQueryOptions } from '../../queries/user.ts';
 import { UserProvider, useUser } from '@/shared/auth/UserContext.tsx';
 import Header from '@/components/project/Header.tsx';
+import { NicknamesProvider } from '@/components/project/NicknamesProvider.tsx';
 import { CommandPaletteProvider } from '@/components/search/CommandPaletteProvider.tsx';
 import { PageError } from '@/components/states/PageError.tsx';
 import { getErrorPresentation } from '@/lib/errorPresentation.ts';
@@ -17,10 +18,12 @@ import { HttpError } from '@/lib/api.ts';
 function AuthenticatedLayout({ children }: { children: React.ReactNode }) {
   return (
     <UserProvider>
-      <CommandPaletteProvider>
-        <Header />
-        {children}
-      </CommandPaletteProvider>
+      <NicknamesProvider>
+        <CommandPaletteProvider>
+          <Header />
+          {children}
+        </CommandPaletteProvider>
+      </NicknamesProvider>
     </UserProvider>
   );
 }

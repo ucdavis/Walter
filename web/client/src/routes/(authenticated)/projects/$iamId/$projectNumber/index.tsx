@@ -5,6 +5,8 @@ import {
   FinjectorLink,
 } from '@/components/project/FinjectorLink.tsx';
 import { TaskBreakdown } from '@/components/project/TaskBreakdown.tsx';
+import { NicknameEditor } from '@/components/project/NicknameEditor.tsx';
+import { ProjectName } from '@/components/project/NicknamedName.tsx';
 import { ProjectDetails } from '@/components/project/ProjectDetails.tsx';
 import { PersonnelTable } from '@/components/project/PersonnelTable.tsx';
 import { usePersonnelQuery } from '@/queries/personnel.ts';
@@ -118,7 +120,19 @@ function ProjectContent({
   return (
     <main className="flex-1 min-w-0">
       <section className="mt-8 mb-2">
-        <h1 className="h1 max-w-4xl">{summary.displayName}</h1>
+        <div className="flex flex-wrap items-center gap-x-2">
+          <h1 className="h1 max-w-4xl">
+            <ProjectName
+              name={summary.displayName}
+              projectNumber={summary.projectNumber}
+            />
+          </h1>
+          <NicknameEditor
+            iamId={iamId}
+            officialName={summary.displayName}
+            projectNumber={summary.projectNumber}
+          />
+        </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-base text-base-content/80">
           <span className="font-sans font-bold text-base-content">
             {summary.projectNumber}

@@ -1,3 +1,5 @@
+import { ProjectName } from '@/components/project/NicknamedName.tsx';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatDate } from '@/lib/date.ts';
 import {
@@ -158,6 +160,7 @@ export function ProjectsSidebar() {
     () => groupProjects(projects ?? []),
     [projects]
   );
+  const nicknames = useProjectNicknames();
   const normalizedSearchQuery = normalizeSearchValue(searchQuery);
   const filteredProjects = useMemo(() => {
     if (!normalizedSearchQuery) {
@@ -166,11 +169,11 @@ export function ProjectsSidebar() {
 
     return groupedProjects.filter((project) => {
       const haystack = normalizeSearchValue(
-        `${project.projectNumber} ${project.displayName}`
+        `${project.projectNumber} ${nicknames.project(project.projectNumber) ?? ''} ${project.displayName}`
       );
       return haystack.includes(normalizedSearchQuery);
     });
-  }, [groupedProjects, normalizedSearchQuery]);
+  }, [groupedProjects, nicknames, normalizedSearchQuery]);
   const totalOverviewBalance = groupedProjects.reduce(
     (total, project) => total + project.totalBalance,
     0
@@ -323,7 +326,8 @@ export function ProjectsSidebar() {
                           </div>
                           <div className="flex justify-between items-start mb-1">
                             <span className="text-base truncate">
-                              {project.displayName}
+                              {nicknames.project(project.projectNumber) ??
+                                project.displayName}
                             </span>
                           </div>
                           <div className="flex text-sm justify-between items-center text-base-content/60">
@@ -473,7 +477,12 @@ export function ProjectsSidebar() {
                   {project.projectNumber}
                 </div>
                 <div className="flex justify-between items-start mb-1">
-                  <span className="text-base">{project.displayName}</span>
+                  <span className="text-base">
+                    <ProjectName
+                      name={project.displayName}
+                      projectNumber={project.projectNumber}
+                    />
+                  </span>
                 </div>
                 <div className="flex text-sm justify-between items-center text-base-content/60">
                   <Currency value={project.totalBalance} />

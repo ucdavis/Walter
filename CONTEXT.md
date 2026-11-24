@@ -73,6 +73,10 @@ snapshot month as the first month. All sources use the same end month. Changing
 the period preserves entered source, appointment, allocation, and expense dates.
 _Avoid_: History window, source lifetime
 
+**Nickname**:
+A short, shared name for a project or for one project and task pair, set by anyone who can open the project. It is shown ahead of the official name and never replaces it; reverting a nickname restores the official name as the lead.
+_Avoid_: Alias, label, display name
+
 **Funding Source**:
 An independently tracked pool of funding within a **Projection Plan**. It can represent an imported project/task pair or hypothetical funding. Project and task numbers identify its origin; its plan-local ID identifies it inside the scenario. Its editable name is separate from the captured project name used for grouping.
 _Avoid_: Project when referring to every kind of source

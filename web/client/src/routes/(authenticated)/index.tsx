@@ -14,6 +14,7 @@ import {
   useManagedPisQuery,
   projectsDetailQueryOptions,
 } from '@/queries/project.ts';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useUser } from '@/shared/auth/UserContext.tsx';
 import { createFileRoute } from '@tanstack/react-router';
 import { PageLoading } from '@/components/states/PageLoading.tsx';
@@ -30,6 +31,7 @@ export const Route = createFileRoute('/(authenticated)/')({
 function RouteComponent() {
   const [activeTab, setActiveTab] = useState<Tab>('pis');
   const user = useUser();
+  const nicknames = useProjectNicknames();
   const { error, isError, isPending, managedPis } = useManagedPisQuery(
     user.iamId
   );
@@ -72,8 +74,13 @@ function RouteComponent() {
     const piOnlyProjects = userProjectsQuery.data.filter(
       (p) => p.pmEmployeeId !== user.employeeId
     );
-    return getProjectListAlerts(piOnlyProjects, user.employeeId);
-  }, [isPrincipalInvestigator, userProjectsQuery.data, user.employeeId]);
+    return getProjectListAlerts(piOnlyProjects, user.employeeId, nicknames);
+  }, [
+    isPrincipalInvestigator,
+    nicknames,
+    userProjectsQuery.data,
+    user.employeeId,
+  ]);
 
   const allAlerts = isProjectManager ? pmAlerts : piAlerts;
 

@@ -12,10 +12,12 @@ const defaultHandlers = [
   http.get('/api/notification', () =>
     HttpResponse.json({ enabled: false, message: '', updatedOn: null })
   ),
+  http.get('/api/project/nicknames', () => HttpResponse.json([])),
   http.get('/api/system/features', () =>
     HttpResponse.json({
       burndownEnabled: true,
       expenditureProgressEnabled: true,
+      nicknamesEnabled: false,
       projectCostsEnabled: true,
       projectionsEnabled: true,
     })

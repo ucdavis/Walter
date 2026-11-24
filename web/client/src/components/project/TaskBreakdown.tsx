@@ -6,9 +6,15 @@ import {
   ChartStringCopyButton,
   FinjectorLink,
 } from '@/components/project/FinjectorLink.tsx';
+import { NicknameEditor } from '@/components/project/NicknameEditor.tsx';
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
 import { TableExportActions } from '@/components/TableExportActions.tsx';
 import { formatCurrency } from '@/lib/currency.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import {
+  type NicknameLookup,
+  useProjectNicknames,
+} from '@/queries/projectNicknames.ts';
 import { DataTable } from '@/shared/DataTable.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 import { tooltipDefinitions } from '@/shared/tooltips.ts';
@@ -27,13 +33,19 @@ interface TaskBreakdownRow {
   programCode: string;
   programDesc: string;
   taskName: string;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
   taskStatus: string;
 }
 
 const columnHelper = createColumnHelper<TaskBreakdownRow>();
 
-function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
+function buildRows(
+  records: ProjectRecord[],
+  projectNumber: string,
+  nicknames: NicknameLookup
+): TaskBreakdownRow[] {
   const map = new Map<string, TaskBreakdownRow>();
 
   for (const r of records) {
@@ -65,6 +77,7 @@ function buildRows(records: ProjectRecord[]): TaskBreakdownRow[] {
         programCode: program,
         programDesc: r.programDesc,
         taskName: r.taskName ?? '',
+        taskNickname: nicknames.task(projectNumber, task) ?? '',
         taskNum: task,
         taskStatus: r.taskStatus,
       });
@@ -134,7 +147,11 @@ export function TaskBreakdown({
   records,
 }: TaskBreakdownProps) {
   const [showAll, setShowAll] = useState(false);
-  const allRows = useMemo(() => buildRows(records), [records]);
+  const nicknames = useProjectNicknames();
+  const allRows = useMemo(
+    () => buildRows(records, projectNumber, nicknames),
+    [nicknames, projectNumber, records]
+  );
   const hiddenCount = useMemo(
     () => allRows.filter(isHiddenByDefault).length,
     [allRows]
@@ -161,7 +178,7 @@ export function TaskBreakdown({
   const columns = useMemo(
     () => [
       columnHelper.accessor(
-        (row) => [row.taskNum, row.taskName].join(' '),
+        (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
         {
           cell: (info) => (
             <div>
@@ -189,11 +206,26 @@ export function TaskBreakdown({
                   </span>
                 )}
               </div>
-              {info.row.original.taskName && (
-                <div className="text-xs text-base-content/80">
-                  {info.row.original.taskName}
-                </div>
-              )}
+              <div className="flex flex-wrap items-center gap-x-1">
+                {(info.row.original.taskName ||
+                  info.row.original.taskNickname) && (
+                  <div className="text-xs text-base-content/80">
+                    <Nicknamed
+                      name={info.row.original.taskName || null}
+                      nickname={info.row.original.taskNickname}
+                      secondary="tooltip"
+                    />
+                  </div>
+                )}
+                {iamId && info.row.original.taskNum && (
+                  <NicknameEditor
+                    iamId={iamId}
+                    officialName={`task ${info.row.original.taskNum}`}
+                    projectNumber={projectNumber}
+                    taskNumber={info.row.original.taskNum}
+                  />
+                )}
+              </div>
             </div>
           ),
           footer: () => 'Totals',

@@ -5,6 +5,7 @@ import {
 } from '@/lib/projectAlerts.ts';
 import type { ProjectSummary } from '@/lib/projectSummary.ts';
 import type { ProjectRecord } from '@/queries/project.ts';
+import { buildNicknameLookup } from '@/queries/projectNicknames.ts';
 
 const createSummary = (
   overrides: Partial<ProjectSummary> = {}
@@ -206,5 +207,37 @@ describe('getProjectListAlerts', () => {
       projectNumber: 'TODAY',
       type: 'negative-balance',
     });
+  });
+});
+
+describe('alert text with nicknames', () => {
+  const projects = [
+    createProject({
+      balance: -500,
+      displayName: 'Official Name',
+      expenses: 10_500,
+      projectNumber: 'SP001',
+    }),
+  ];
+
+  it('uses the project nickname when one is set', () => {
+    const nicknames = buildNicknameLookup(
+      [
+        {
+          nickname: 'Smith startup',
+          projectNumber: 'SP001',
+          taskNumber: '',
+        },
+      ],
+      true
+    );
+    const [alert] = getProjectListAlerts(projects, 'E1', nicknames);
+    expect(alert.message).toContain('SP001 Smith startup ');
+    expect(alert.message).not.toContain('Official Name');
+  });
+
+  it('is unchanged without a lookup', () => {
+    const [alert] = getProjectListAlerts(projects, 'E1');
+    expect(alert.message).toContain('SP001 Official Name ');
   });
 });

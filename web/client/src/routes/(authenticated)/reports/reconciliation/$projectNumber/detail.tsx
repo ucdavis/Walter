@@ -1,3 +1,5 @@
+import { Nicknamed } from '@/components/project/NicknamedName.tsx';
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useState } from 'react';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
@@ -74,6 +76,8 @@ interface PpmTaskRow {
   projectNumber: string;
   projectOwningOrg: string | null;
   taskName: string | null;
+  /** Empty when the task has no nickname. */
+  taskNickname: string;
   taskNum: string;
 }
 
@@ -88,19 +92,27 @@ const ppmTaskColumns = [
     cell: (info) => <span className="text-sm">{info.getValue()}</span>,
     header: 'Project',
   }),
-  ppmTaskColumnHelper.accessor('taskNum', {
-    cell: (info) => (
-      <div className="text-sm">
-        <div>{info.getValue()}</div>
-        {info.row.original.taskName && (
-          <div className="text-xs text-base-content/80">
-            {info.row.original.taskName}
-          </div>
-        )}
-      </div>
-    ),
-    header: 'Task',
-  }),
+  ppmTaskColumnHelper.accessor(
+    (row) => [row.taskNum, row.taskNickname, row.taskName].join(' '),
+    {
+      cell: (info) => (
+        <div className="text-sm">
+          <div>{info.row.original.taskNum}</div>
+          {(info.row.original.taskName || info.row.original.taskNickname) && (
+            <div className="text-xs text-base-content/80">
+              <Nicknamed
+                name={info.row.original.taskName}
+                nickname={info.row.original.taskNickname}
+                secondary="tooltip"
+              />
+            </div>
+          )}
+        </div>
+      ),
+      header: 'Task',
+      id: 'taskNum',
+    }
+  ),
   ppmTaskColumnHelper.accessor('fundCode', {
     cell: (info) => (
       <div className="text-sm">
@@ -301,6 +313,8 @@ function RouteComponent() {
   const isPending = isReconciliationPending || isTransactionsPending;
   const isError = isReconciliationError || isTransactionsError;
 
+  const nicknames = useProjectNicknames();
+
   // Find the specific reconciliation record
   const ppmRecord = reconciliation?.find((r) => matchesPPM(r, search));
 
@@ -330,6 +344,7 @@ function RouteComponent() {
             projectNumber: p.projectNumber,
             projectOwningOrg: p.projectOwningOrg ?? null,
             taskName: p.taskName ?? null,
+            taskNickname: nicknames.task(p.projectNumber, p.taskNum) ?? '',
             taskNum: p.taskNum ?? '',
           };
         }

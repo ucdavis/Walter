@@ -1,3 +1,4 @@
+import { useProjectNicknames } from '@/queries/projectNicknames.ts';
 import { useMemo } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import {
@@ -23,6 +24,7 @@ export function usePiProjectAlerts(
   managedPis: ManagedPiRecord[],
   pmEmployeeId: string
 ): PiProjectAlertsState {
+  const nicknames = useProjectNicknames();
   const navigablePis = useMemo(
     () => managedPis.filter((pi) => Boolean(pi.iamId)),
     [managedPis]
@@ -67,7 +69,7 @@ export function usePiProjectAlerts(
       };
     });
 
-    alerts = getPiProjectAlerts(pisWithProjects);
+    alerts = getPiProjectAlerts(pisWithProjects, nicknames);
   }
 
   return {

@@ -78,6 +78,20 @@ function openDashboard() {
   return renderRoute({ initialPath: '/projections/IAM-PREVIEW' });
 }
 
+const balanceSource = (taskNumber: string, taskName: string) => ({
+  availableBalance: 100,
+  capturedAt: '2026-11-09T12:00:00.1234567Z',
+  projectName: 'Field study',
+  projectNumber: 'P1',
+  taskName,
+  taskNumber,
+});
+const p1Nickname = (taskNumber: string, value: string) => ({
+  nickname: value,
+  projectNumber: 'P1',
+  taskNumber,
+});
+
 describe('projection dashboard', () => {
   it('removes plan entry points when the flag turns off while viewing the dashboard', async () => {
     handleDashboard([example(71, 'Visible plan')]);
@@ -316,6 +330,42 @@ describe('projection dashboard', () => {
       ).toBeInTheDocument();
       expect(seedReads).toBe(0);
       expect(writes).toBe(0);
+    } finally {
+      route.cleanup();
+    }
+  });
+
+  it('shows project and task nicknames in current balances', async () => {
+    handleDashboard([example(71, 'Captured plan')]);
+    server.use(
+      http.get(listUrl + '/sources', () =>
+        HttpResponse.json([
+          balanceSource('T1', 'Fieldwork'),
+          balanceSource('T2', 'Analysis'),
+        ])
+      ),
+      http.get('/api/system/features', () =>
+        HttpResponse.json({ nicknamesEnabled: true, projectionsEnabled: true })
+      ),
+      http.get('/api/project/nicknames', () =>
+        HttpResponse.json([
+          p1Nickname('', 'Smith startup'),
+          p1Nickname('T1', 'Boots'),
+        ])
+      )
+    );
+    const route = openDashboard();
+    try {
+      const current = await screen.findByRole('region', {
+        name: 'Current project balances',
+      });
+      await userEvent
+        .setup()
+        .click(await within(current).findByText('Project balances (1)'));
+      expect(await within(current).findByText('Smith startup')).toBeVisible();
+      expect(within(current).getByText('Boots T1')).toBeVisible();
+      expect(within(current).getByText('Analysis T2')).toBeVisible();
+      expect(within(current).getByTitle(/Field study/)).toBeInTheDocument();
     } finally {
       route.cleanup();
     }

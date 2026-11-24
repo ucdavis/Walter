@@ -26,6 +26,22 @@ public sealed class PpmPortfolioService(
             .ToArray();
     }
 
+    /// <summary>
+    /// The projects that make up a person's portfolio page: those where they are PI, plus
+    /// projects they manage that have no project PI.
+    /// </summary>
+    public async Task<PortfolioProjects> GetPortfolioProjectsAsync(string employeeId, CancellationToken ct)
+    {
+        var piTask = GetEmployeeProjectsAsync(employeeId, PpmRole.PrincipalInvestigator, ct);
+        var pmTask = GetEmployeeProjectsAsync(employeeId, PpmRole.ProjectManager, ct);
+        await Task.WhenAll(piTask, pmTask);
+
+        var orphaned = (await pmTask)
+            .Where(p => !p.TeamMembers.Any(m => m.RoleName == PpmRole.PrincipalInvestigator))
+            .ToList();
+        return new PortfolioProjects(await piTask, orphaned);
+    }
+
     /// <inheritdoc cref="IPpmPortfolioReader.GetProjectTeamAsync" />
     public async Task<IReadOnlyList<PpmTeamMember>> GetProjectTeamAsync(string projectNumber, string roleName, CancellationToken ct)
     {
@@ -83,4 +99,12 @@ public sealed class PpmPortfolioService(
                     (m.RoleName == PpmRole.PrincipalInvestigator || m.RoleName == PpmRole.ProjectManager) &&
                     string.Equals(m.EmployeeId, requesterEmployeeId, StringComparison.OrdinalIgnoreCase)));
     }
+}
+
+public sealed record PortfolioProjects(
+    IReadOnlyList<PpmProjectMembership> PiProjects,
+    IReadOnlyList<PpmProjectMembership> OrphanedProjects)
+{
+    public IReadOnlyList<string> ProjectNumbers =>
+        PiProjects.Concat(OrphanedProjects).Select(p => p.ProjectNumber).Distinct().ToList();
 }
