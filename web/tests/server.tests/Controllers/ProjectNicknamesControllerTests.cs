@@ -158,6 +158,13 @@ public sealed class ProjectNicknamesControllerTests
             .Which.Should().HaveCount(2);
     }
 
+    [Fact]
+    public void Shared_list_does_not_expose_who_edited_a_nickname()
+    {
+        typeof(ProjectNicknamesController.NicknameResponse).GetProperties().Select(p => p.Name)
+            .Should().BeEquivalentTo("ProjectNumber", "TaskNumber", "Nickname");
+    }
+
     private static Task<IActionResult> Put(
         ProjectNicknamesController controller, string? iamId, string? project, string? task, string? nickname)
         => controller.UpsertAsync(

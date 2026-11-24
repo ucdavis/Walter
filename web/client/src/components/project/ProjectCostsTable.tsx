@@ -18,13 +18,13 @@ import { DatePicker } from '@/shared/DatePicker.tsx';
 import { TooltipLabel } from '@/shared/TooltipLabel.tsx';
 
 const columnHelper = createColumnHelper<ProjectCostRow>();
-// Export carries every report column, not just the ones shown on the page.
 /** A cost row plus its nicknames; empty strings when none are set. */
 type ProjectCostRow = ProjectCostRecord & {
   projectNickname: string;
   taskNickname: string;
 };
 
+// Export carries every report column, not just the ones shown on the page.
 const projectCostCsvColumns: CsvColumn<ProjectCostRow>[] = [
   { header: 'Transaction Number', key: 'transactionNumber' },
   { header: 'Award Number', key: 'awardNumber' },

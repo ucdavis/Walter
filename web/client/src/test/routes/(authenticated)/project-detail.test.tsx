@@ -115,8 +115,6 @@ const serveNicknames = (enabled: boolean) =>
           nickname: 'Smith startup',
           projectNumber: 'P1',
           taskNumber: '',
-          updatedAt: '',
-          updatedBy: null,
         },
       ])
     )

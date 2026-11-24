@@ -52,8 +52,6 @@ const nickname = (
   nickname: value,
   projectNumber,
   taskNumber,
-  updatedAt: '',
-  updatedBy: null,
 });
 
 const nicknames = buildNicknameLookup(

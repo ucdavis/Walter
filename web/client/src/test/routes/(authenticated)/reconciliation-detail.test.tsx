@@ -315,8 +315,6 @@ describe('reconciliation detail nicknames', () => {
             nickname: 'Equipment',
             projectNumber: 'PROJ001',
             taskNumber: 'T001',
-            updatedAt: '',
-            updatedBy: null,
           },
         ])
       )

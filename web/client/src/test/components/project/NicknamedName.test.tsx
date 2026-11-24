@@ -15,15 +15,11 @@ const rows = [
     nickname: 'Smith startup',
     projectNumber: 'SP001',
     taskNumber: '',
-    updatedAt: '',
-    updatedBy: null,
   },
   {
     nickname: 'Equipment',
     projectNumber: 'SP001',
     taskNumber: 'TASK01',
-    updatedAt: '',
-    updatedBy: null,
   },
 ];
 

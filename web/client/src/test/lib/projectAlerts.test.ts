@@ -227,8 +227,6 @@ describe('alert text with nicknames', () => {
           nickname: 'Smith startup',
           projectNumber: 'SP001',
           taskNumber: '',
-          updatedAt: '',
-          updatedBy: null,
         },
       ],
       true

@@ -506,15 +506,11 @@ describe('project costs page', () => {
             nickname: 'Smith startup',
             projectNumber: 'P1',
             taskNumber: '',
-            updatedAt: '',
-            updatedBy: null,
           },
           {
             nickname: 'Field kit',
             projectNumber: 'P1',
             taskNumber: 'TASK02',
-            updatedAt: '',
-            updatedBy: null,
           },
         ])
       )

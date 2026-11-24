@@ -35,8 +35,8 @@ public sealed class ProjectNicknamesController : ApiControllerBase
         _portfolioService = portfolioService;
     }
 
-    public sealed record NicknameResponse(
-        string ProjectNumber, string TaskNumber, string Nickname, string? UpdatedBy, DateTime UpdatedAt);
+    // Everyone can read this list, so it leaves out who edited each nickname.
+    public sealed record NicknameResponse(string ProjectNumber, string TaskNumber, string Nickname);
 
     /// <param name="IamId">Owner of the portfolio page the caller is editing from.</param>
     /// <param name="TaskNumber">Blank to nickname the project itself.</param>
@@ -48,7 +48,7 @@ public sealed class ProjectNicknamesController : ApiControllerBase
     {
         var nicknames = await _ctx.ProjectNicknames
             .AsNoTracking()
-            .Select(n => new NicknameResponse(n.ProjectNumber, n.TaskNumber, n.Nickname, n.UpdatedBy, n.UpdatedAt))
+            .Select(n => new NicknameResponse(n.ProjectNumber, n.TaskNumber, n.Nickname))
             .ToListAsync(cancellationToken);
         return Ok(nicknames);
     }
@@ -112,7 +112,7 @@ public sealed class ProjectNicknamesController : ApiControllerBase
         row.UpdatedAt = DateTime.UtcNow;
         await _ctx.SaveChangesAsync(cancellationToken);
 
-        return Ok(new NicknameResponse(row.ProjectNumber, row.TaskNumber, row.Nickname, row.UpdatedBy, row.UpdatedAt));
+        return Ok(new NicknameResponse(row.ProjectNumber, row.TaskNumber, row.Nickname));
     }
 
     /// <summary>

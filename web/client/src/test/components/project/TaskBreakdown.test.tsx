@@ -318,8 +318,6 @@ describe('TaskBreakdown', () => {
           nickname: 'Equipment',
           projectNumber: 'P1',
           taskNumber: 'T001',
-          updatedAt: '',
-          updatedBy: null,
         },
       ],
       true

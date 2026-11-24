@@ -17,8 +17,6 @@ const existing: ProjectNicknameDto = {
   nickname: 'Smith startup',
   projectNumber: 'SP001',
   taskNumber: '',
-  updatedAt: '',
-  updatedBy: null,
 };
 
 function renderEditor({

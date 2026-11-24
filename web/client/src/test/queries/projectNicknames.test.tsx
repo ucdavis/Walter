@@ -25,8 +25,6 @@ const row = (
   nickname,
   projectNumber,
   taskNumber,
-  updatedAt: '2026-11-24T00:00:00Z',
-  updatedBy: null,
 });
 
 const features = (nicknamesEnabled: boolean) => ({

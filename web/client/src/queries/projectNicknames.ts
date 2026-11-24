@@ -7,8 +7,6 @@ export interface ProjectNicknameDto {
   projectNumber: string;
   /** Empty string means the nickname is for the project itself. */
   taskNumber: string;
-  updatedAt: string;
-  updatedBy: string | null;
 }
 
 export interface NicknameLookup {

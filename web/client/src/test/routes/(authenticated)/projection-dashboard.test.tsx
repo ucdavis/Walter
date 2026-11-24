@@ -90,8 +90,6 @@ const p1Nickname = (taskNumber: string, value: string) => ({
   nickname: value,
   projectNumber: 'P1',
   taskNumber,
-  updatedAt: '',
-  updatedBy: null,
 });
 
 describe('projection dashboard', () => {
