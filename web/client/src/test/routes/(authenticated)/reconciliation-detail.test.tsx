@@ -21,7 +21,7 @@ const createReconciliationRecord = (
   glActualAmount: -500.25,
   oracleProjectId: 300_000_014_220_069,
   ppmBudBal: 1500.75,
-  ppmBudget: 10_000,
+  ppmBudget: 10000,
   ppmFundCode: '13U02',
   ppmFundDescription: 'COFI University Common Funds',
   ppmItdExp: 8299.25,
@@ -93,7 +93,9 @@ const setupHandlers = (
     http.get('/api/project/gl-ppm-reconciliation', () =>
       HttpResponse.json(reconciliation)
     ),
-    http.get('/api/project/transactions', () => HttpResponse.json(transactions))
+    http.get('/api/project/transactions', () =>
+      HttpResponse.json(transactions)
+    )
   );
 };
 

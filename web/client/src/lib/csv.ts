@@ -27,27 +27,21 @@ export function insertCsvColumnAfter<T>(
 }
 
 function escapeCsvValue(value: CsvValue): string {
-  if (value === null || value === undefined) {
-    return '';
-  }
+  if (value === null || value === undefined) return '';
   const str = String(value);
   if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replaceAll('"', '""')}"`;
+    return `"${str.replace(/"/g, '""')}"`;
   }
   return str;
 }
 
 const defaultFormat = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return '';
-  }
+  if (value === null || value === undefined) return '';
   return String(value);
 };
 
 function formatDateCsv(value: unknown): string {
-  if (value === null || value === undefined) {
-    return '';
-  }
+  if (value === null || value === undefined) return '';
   try {
     return format(parseISO(String(value)), 'MM/dd/yyyy');
   } catch {
@@ -56,26 +50,18 @@ function formatDateCsv(value: unknown): string {
 }
 
 function formatCurrencyCsv(value: unknown): string {
-  if (value === null || value === undefined) {
-    return '';
-  }
+  if (value === null || value === undefined) return '';
   const amount = Number(value);
-  if (!Number.isFinite(amount)) {
-    return '';
-  }
+  if (!Number.isFinite(amount)) return '';
   return new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 6,
     minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
   }).format(amount);
 }
 
 function resolveFormat(fmt?: CsvFormat): (value: unknown) => string {
-  if (fmt === 'date') {
-    return formatDateCsv;
-  }
-  if (fmt === 'currency') {
-    return formatCurrencyCsv;
-  }
+  if (fmt === 'date') return formatDateCsv;
+  if (fmt === 'currency') return formatCurrencyCsv;
   return defaultFormat;
 }
 
@@ -98,7 +84,10 @@ export function toCsv<T>(
   return options?.includeBom ? `\ufeff${csv}` : csv;
 }
 
-export function toExcelCsv<T>(rows: T[], columns: CsvColumn<T>[]): string {
+export function toExcelCsv<T>(
+  rows: T[],
+  columns: CsvColumn<T>[]
+): string {
   return toCsv(rows, columns, { includeBom: true, lineEnding: '\r\n' });
 }
 

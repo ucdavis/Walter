@@ -48,7 +48,7 @@ const createSummary = (
   projectStatusCode: 'ACTIVE',
   sponsorAwardNumber: null,
   taskNum: null,
-  totals: { balance: 5000, budget: 10_000, encumbrance: 0, expense: 5000 },
+  totals: { balance: 5000, budget: 10000, encumbrance: 0, expense: 5000 },
   ...overrides,
 });
 
@@ -64,7 +64,7 @@ const createProject = (overrides: Partial<ProjectRecord> = {}): ProjectRecord =>
     awardType: null,
     balance: 5000,
     billingCycle: null,
-    budget: 10_000,
+    budget: 10000,
     commitments: 0,
     contractAdministrator: null,
     copi: null,
@@ -102,12 +102,7 @@ afterEach(() => {
 describe('getAlertsForProject', () => {
   it('returns error alert for negative balance', () => {
     const summary = createSummary({
-      totals: {
-        balance: -500,
-        budget: 10_000,
-        encumbrance: 0,
-        expense: 10_500,
-      },
+      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -118,7 +113,7 @@ describe('getAlertsForProject', () => {
 
   it('returns warning alert for low budget (<10%)', () => {
     const summary = createSummary({
-      totals: { balance: 900, budget: 10_000, encumbrance: 0, expense: 9100 },
+      totals: { balance: 900, budget: 10000, encumbrance: 0, expense: 9100 },
     });
     const alerts = getAlertsForProject(summary);
 
@@ -149,12 +144,7 @@ describe('getAlertsForProject', () => {
 
   it('uses custom prefix in message', () => {
     const summary = createSummary({
-      totals: {
-        balance: -500,
-        budget: 10_000,
-        encumbrance: 0,
-        expense: 10_500,
-      },
+      totals: { balance: -500, budget: 10000, encumbrance: 0, expense: 10500 },
     });
     const alerts = getAlertsForProject(summary, 'My Project ');
 

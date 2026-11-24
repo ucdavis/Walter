@@ -365,12 +365,10 @@ function RouteComponent() {
   );
 
   const filteredGlTransactions = glTransactions.filter((t) => {
-    if (accountFilter === 'revenue') {
+    if (accountFilter === 'revenue')
       return t.naturalAccountType?.startsWith('4');
-    }
-    if (accountFilter === 'expense') {
+    if (accountFilter === 'expense')
       return t.naturalAccountType?.startsWith('5');
-    }
     return true;
   });
 
@@ -516,7 +514,7 @@ function RouteComponent() {
                 data={filteredGlTransactions}
                 expandable={true}
                 initialState={{
-                  sorting: [{ desc: true, id: 'journalAcctDate' }],
+                  sorting: [{ id: 'journalAcctDate', desc: true }],
                 }}
                 pagination="auto"
                 tableActions={
